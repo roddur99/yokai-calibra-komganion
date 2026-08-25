@@ -21,6 +21,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.text.TextUtils
+import android.text.format.Formatter
 import android.text.style.DynamicDrawableSpan
 import android.text.style.ImageSpan
 import android.view.GestureDetector
@@ -151,6 +152,9 @@ import eu.kanade.tachiyomi.widget.doOnStart
 import java.io.ByteArrayOutputStream
 import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.util.Collections
 import java.util.Locale
 import kotlin.math.abs
@@ -174,6 +178,7 @@ import yokai.domain.base.BasePreferences
 import yokai.domain.ui.settings.ReaderPreferences
 import yokai.domain.ui.settings.ReaderPreferences.LandscapeCutoutBehaviour
 import yokai.i18n.MR
+import yokai.source.gallery.GalleryKomganionSource
 import yokai.util.lang.getString
 import android.R as AR
 
@@ -1489,6 +1494,7 @@ class ReaderActivity : BaseActivity<ReaderActivityBinding>() {
     fun onPageSelected(page: ReaderPage, hasExtraPage: Boolean) {
         viewModel.onPageSelected(page, hasExtraPage)
         val pages = page.chapter.pages ?: return
+        updateGalleryPageMetadata(page, pages)
 
         val currentPage = if (hasExtraPage) {
             val invertDoublePage = (viewer as? PagerViewer)?.config?.invertDoublePages ?: false
@@ -1591,6 +1597,19 @@ class ReaderActivity : BaseActivity<ReaderActivityBinding>() {
                     MR.strings.set_as_cover,
                 ),
             )
+        }.let { baseItems ->
+            if (
+                extraPage == null &&
+                viewModel.source is GalleryKomganionSource
+            ) {
+                baseItems + MaterialMenuSheet.MenuSheetItem(
+                    8,
+                    R.drawable.ic_delete_24dp,
+                    MR.strings.move_image_to_trash,
+                )
+            } else {
+                baseItems
+            }
         }
         MaterialMenuSheet(this, items) { _, item ->
             when (item) {
@@ -1600,6 +1619,7 @@ class ReaderActivity : BaseActivity<ReaderActivityBinding>() {
                 3 -> extraPage?.let { shareImage(it) }
                 4 -> extraPage?.let { saveImage(it) }
                 5 -> extraPage?.let { showSetCoverPrompt(it) }
+                8 -> showTrashGalleryPagePrompt(page)
                 6, 7 -> extraPage?.let { secondPage ->
                     (viewer as? PagerViewer)?.let { viewer ->
                         val isLTR = (viewer !is R2LPagerViewer).xor(viewer.config.invertDoublePages)
@@ -1617,6 +1637,85 @@ class ReaderActivity : BaseActivity<ReaderActivityBinding>() {
         if (binding.chaptersSheet.root.sheetBehavior.isExpanded()) {
             binding.chaptersSheet.root.sheetBehavior?.collapse()
         }
+    }
+
+    private fun updateGalleryPageMetadata(
+        page: ReaderPage,
+        pages: List<ReaderPage>,
+    ) {
+        if (viewModel.source !is GalleryKomganionSource) return
+
+        binding.toolbar.title = page.displayName ?: viewModel.manga?.title
+
+        val details = buildList {
+            add("${page.number}/${pages.size}")
+            if (page.imageWidth != null && page.imageHeight != null) {
+                add("${page.imageWidth}×${page.imageHeight}")
+            }
+            page.sizeBytes?.let {
+                add(Formatter.formatFileSize(this@ReaderActivity, it))
+            }
+            page.modifiedAt
+                ?.let(::formatGalleryDate)
+                ?.let(::add)
+        }
+        binding.toolbar.subtitle = details.joinToString(" · ")
+    }
+
+    private fun formatGalleryDate(value: String): String? {
+        return runCatching {
+            DateTimeFormatter
+                .ofPattern("MMM d, yyyy h:mm a", Locale.getDefault())
+                .withZone(ZoneId.systemDefault())
+                .format(Instant.parse(value))
+        }.getOrNull()
+    }
+
+    private fun showTrashGalleryPagePrompt(page: ReaderPage) {
+        val source = viewModel.source as? GalleryKomganionSource ?: return
+        val galleryId = page.chapter.chapter.url
+            .substringAfter("/galleries/", "")
+            .substringBefore("/")
+
+        if (galleryId.isBlank()) return
+
+        materialAlertDialog()
+            .setTitle(MR.strings.move_image_to_trash)
+            .setMessage(
+                getString(
+                    MR.strings.move_image_to_trash_confirm,
+                    page.displayName ?: "this image",
+                ),
+            )
+            .setPositiveButton(MR.strings.move_image_to_trash) { _, _ ->
+                lifecycleScope.launchIO {
+                    try {
+                        val result = source.trashPage(
+                            galleryId = galleryId,
+                            pageIndex = page.index,
+                        )
+
+                        if (result.remainingPages > 0) {
+                            viewModel.reloadCurrentChapterAfterPageDeletion(
+                                result.nextPageIndex ?: 0,
+                            )
+                        }
+
+                        withUIContext {
+                            toast(MR.strings.image_moved_to_trash)
+                            if (result.remainingPages == 0) {
+                                finish()
+                            }
+                        }
+                    } catch (error: Throwable) {
+                        withUIContext {
+                            toast(error.message)
+                        }
+                    }
+                }
+            }
+            .setNegativeButton(AR.string.cancel, null)
+            .show()
     }
 
     /**
