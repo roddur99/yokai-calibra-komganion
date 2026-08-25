@@ -1211,4 +1211,6 @@
     <string name="pause_gallery_slideshow">Pause slideshow</string>
     <string name="shuffle_gallery_slideshow">Shuffle slideshow</string>
     <string name="gallery_slideshow_finished">Slideshow finished</string>
+    <string name="gallery_slideshow_speed">Slideshow speed</string>
+    <string name="gallery_slideshow_seconds">%1$d seconds</string>
 </resources>
