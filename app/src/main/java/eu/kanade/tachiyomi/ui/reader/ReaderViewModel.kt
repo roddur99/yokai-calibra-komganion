@@ -270,8 +270,9 @@ class ReaderViewModel(
     }
 
     suspend fun removeCurrentChapterAfterRemoteDelete() {
-        val chapter = getCurrentChapter()?.chapter ?: return
-        deleteChapter.await(chapter)
+        val readerChapter = getCurrentChapter() ?: return
+        saveChapterHistory(readerChapter)
+        deleteChapter.await(readerChapter.chapter)
     }
 
     suspend fun getChapters(): List<ReaderChapterItem> {
