@@ -146,9 +146,7 @@ class GalleryKomganionSource : HttpSource() {
         }
     }
 
-    private fun endpoint(path: String) = absoluteUrl(path).let {
-        okhttp3.HttpUrl.Companion.toHttpUrl(it)
-    }
+    private fun endpoint(path: String) = absoluteUrl(path).toHttpUrl()
 
     private fun absoluteUrl(path: String): String {
         check(baseUrl.isNotBlank()) {
