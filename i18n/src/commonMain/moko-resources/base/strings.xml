@@ -1201,4 +1201,7 @@
     <string name="crash_screen_restart_application">Restart the application</string>
 
     <string name="refresh">Refresh</string>
+    <string name="move_image_to_trash">Move image to trash</string>
+    <string name="move_image_to_trash_confirm">Move “%1$s” to the Gallery Komganion trash folder?</string>
+    <string name="image_moved_to_trash">Image moved to trash</string>
 </resources>
