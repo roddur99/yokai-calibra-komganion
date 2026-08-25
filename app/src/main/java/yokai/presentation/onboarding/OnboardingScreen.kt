@@ -24,7 +24,8 @@ import yokai.util.lang.getString
 import dev.icerock.moko.resources.compose.stringResource
 import soup.compose.material.motion.animation.materialSharedAxisX
 import soup.compose.material.motion.animation.rememberSlideDistance
-import yokai.presentation.onboarding.steps.PermissionStep
+import yokai.presentation.onboarding.steps.GalleryConnectionStep
+import yokai.presentation.onboarding.steps.KomgaConnectionStep
 import yokai.presentation.onboarding.steps.StorageStep
 import yokai.presentation.onboarding.steps.ThemeStep
 import yokai.presentation.theme.Size
@@ -39,8 +40,9 @@ fun OnboardingScreen(
     val steps = remember {
         listOf(
             ThemeStep(),
+            KomgaConnectionStep(),
+            GalleryConnectionStep(),
             StorageStep(),
-            PermissionStep(),
         )
     }
     val isLastStep = currentStep == steps.lastIndex
