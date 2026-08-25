@@ -22,6 +22,8 @@ import kotlinx.coroutines.runInterruptible
 import kotlinx.coroutines.suspendCancellableCoroutine
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
+import yokai.source.gallery.GalleryKomganionSource
+import yokai.source.gallery.GalleryPage
 
 /**
  * Loader used to load chapters from an online source.
@@ -67,7 +69,9 @@ class HttpPageLoader(
         queue.clear()
 
         // Cache current page list progress for online chapters to allow a faster reopen
-        chapter.pages?.let { pages ->
+        chapter.pages
+            ?.takeIf { source !is GalleryKomganionSource }
+            ?.let { pages ->
             launchIO {
                 try {
                     // Convert to pages without reader information
@@ -87,17 +91,34 @@ class HttpPageLoader(
      * otherwise fallbacks to network.
      */
     override suspend fun getPages(): List<ReaderPage> {
-        val pages = try {
-            chapterCache.getPageListFromCache(chapter.chapter)
-        } catch (e: Throwable) {
-            if (e is CancellationException) {
-                throw e
-            }
+        val pages = if (source is GalleryKomganionSource) {
             source.getPageList(chapter.chapter)
+        } else {
+            try {
+                chapterCache.getPageListFromCache(chapter.chapter)
+            } catch (e: Throwable) {
+                if (e is CancellationException) {
+                    throw e
+                }
+                source.getPageList(chapter.chapter)
+            }
         }
         return pages.mapIndexed { index, page ->
             // Don't trust sources and use our own indexing
-            ReaderPage(index, page.url, page.imageUrl)
+            if (page is GalleryPage) {
+                ReaderPage(
+                    index = index,
+                    url = page.url,
+                    imageUrl = page.imageUrl,
+                    displayName = page.filename,
+                    modifiedAt = page.modifiedAt,
+                    sizeBytes = page.sizeBytes,
+                    imageWidth = page.width,
+                    imageHeight = page.height,
+                )
+            } else {
+                ReaderPage(index, page.url, page.imageUrl)
+            }
         }
     }
 
