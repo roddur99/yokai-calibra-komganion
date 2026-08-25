@@ -7,15 +7,11 @@ import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Public
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
@@ -66,7 +62,6 @@ import yokai.presentation.component.preference.widget.TextPreferenceWidget
 import yokai.presentation.core.components.LinkIcon
 import yokai.presentation.core.enterAlwaysCollapsedAppBarScrollBehavior
 import yokai.presentation.core.icons.CustomIcons
-import yokai.presentation.core.icons.Discord
 import yokai.presentation.core.icons.GitHub
 import yokai.presentation.settings.SettingsScaffold
 import yokai.util.Screen
@@ -180,24 +175,6 @@ class AboutScreen : Screen() {
                     }
 
                     item {
-                        Column(modifier = Modifier.fillMaxWidth()) {
-                            HorizontalDivider()
-
-                            TextPreferenceWidget(
-                                title = stringResource(MR.strings.help_translate),
-                                onPreferenceClick = { context.openInBrowser("https://hosted.weblate.org/engage/yokai/") },
-                            )
-                        }
-                    }
-
-                    item {
-                        TextPreferenceWidget(
-                            title = stringResource(MR.strings.helpful_translation_links),
-                            onPreferenceClick = { context.openInBrowser("https://mihon.app/docs/contribute#helpful-links") },
-                        )
-                    }
-
-                    item {
                         TextPreferenceWidget(
                             title = stringResource(MR.strings.open_source_licenses),
                             onPreferenceClick = { navigator.push(AboutLicenseScreen()) },
@@ -213,19 +190,14 @@ class AboutScreen : Screen() {
                             horizontalArrangement = Arrangement.Center,
                         ) {
                             LinkIcon(
-                                label = "Website",
-                                icon = Icons.Outlined.Public,
-                                url = "https://mihon.app",
-                            )
-                            LinkIcon(
-                                label = "Discord",
-                                icon = CustomIcons.Discord,
-                                url = "https://discord.gg/mihon",
-                            )
-                            LinkIcon(
-                                label = "GitHub",
+                                label = "Android client",
                                 icon = CustomIcons.GitHub,
-                                url = "https://github.com/null2264/yokai",
+                                url = "https://github.com/roddur99/yokai-komganion",
+                            )
+                            LinkIcon(
+                                label = "Gallery server",
+                                icon = CustomIcons.GitHub,
+                                url = "https://github.com/roddur99/gallery-komganion",
                             )
                         }
                     }
@@ -297,4 +269,4 @@ fun getFormattedBuildTime(dateFormat: DateFormat): String {
     }
 }
 
-private const val SOURCE_URL = "https://github.com/null2264/yokai/commits/master"
+private const val SOURCE_URL = "https://github.com/roddur99/yokai-komganion/commits/feature/gallery-komganion"
