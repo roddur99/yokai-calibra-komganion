@@ -22,6 +22,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import yokai.i18n.MR
 import yokai.source.gallery.GalleryKomganionSource
+import yokai.source.komga.KomgaSource
 import yokai.util.lang.getString
 
 class SourceManager(
@@ -46,10 +47,12 @@ class SourceManager(
             extensionManager.installedExtensionsFlow
                 .collectLatest { extensions ->
                     val gallerySource = GalleryKomganionSource()
+                    val komgaSource = KomgaSource()
                     val mutableMap = ConcurrentHashMap<Long, Source>(
                         mapOf(
                             LocalSource.ID to LocalSource(context),
                             GalleryKomganionSource.ID to gallerySource,
+                            KomgaSource.ID to komgaSource,
                         ),
                     )
                     extensions.forEach { extension ->
