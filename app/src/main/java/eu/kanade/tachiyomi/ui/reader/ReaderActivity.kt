@@ -1916,6 +1916,7 @@ class ReaderActivity : BaseActivity<ReaderActivityBinding>() {
                 lifecycleScope.launchIO {
                     try {
                         source.deleteBook(bookId)
+                        viewModel.removeCurrentChapterAfterRemoteDelete()
                         withUIContext {
                             toast(MR.strings.book_deleted_from_komga)
                             finish()
