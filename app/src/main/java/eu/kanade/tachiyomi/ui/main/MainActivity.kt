@@ -78,7 +78,6 @@ import eu.kanade.tachiyomi.data.updater.AppUpdateNotifier
 import eu.kanade.tachiyomi.data.updater.AppUpdateResult
 import eu.kanade.tachiyomi.data.updater.RELEASE_URL
 import eu.kanade.tachiyomi.databinding.MainActivityBinding
-import eu.kanade.tachiyomi.extension.ExtensionManager
 import eu.kanade.tachiyomi.source.online.HttpSource
 import eu.kanade.tachiyomi.ui.base.MaterialMenuSheet
 import eu.kanade.tachiyomi.ui.base.SmallToolbarInterface
@@ -149,6 +148,8 @@ import yokai.domain.recents.interactor.GetRecents
 import yokai.i18n.MR
 import yokai.presentation.core.Constants
 import yokai.presentation.extension.repo.ExtensionRepoController
+import yokai.presentation.gallery.GalleryBrowseController
+import yokai.presentation.komga.KomgaBrowseController
 import yokai.presentation.onboarding.OnboardingController
 import yokai.util.lang.getString
 import android.R as AR
@@ -169,7 +170,6 @@ open class MainActivity : BaseActivity<MainActivityBinding>() {
     private var animationSet: AnimatorSet? = null
     private val downloadManager: DownloadManager by injectLazy()
     private val mangaShortcutManager: MangaShortcutManager by injectLazy()
-    private val extensionManager: ExtensionManager by injectLazy()
 
     private val getRecents: GetRecents by injectLazy()
 
@@ -422,24 +422,6 @@ open class MainActivity : BaseActivity<MainActivityBinding>() {
             }
             true
         }
-        nav.getItemView(R.id.nav_browse)?.setOnLongClickListener {
-            if (nav.selectedItemId != R.id.nav_browse) {
-                nav.selectedItemId = R.id.nav_browse
-            }
-            when (basePreferences.longTapBrowseNavBehaviour().get()) {
-                BasePreferences.LongTapBrowse.DEFAULT -> {
-                    nav.post {
-                        val controller =
-                            router.backstack.firstOrNull()?.controller as? BottomSheetController
-                        controller?.showSheet()
-                    }
-                }
-                BasePreferences.LongTapBrowse.SEARCH ->
-                    router.pushController(GlobalSearchController().withFadeTransaction())
-            }
-            true
-        }
-
         val container: ViewGroup = binding.controllerContainer
 
         val content: ViewGroup = binding.mainContent
@@ -517,6 +499,8 @@ open class MainActivity : BaseActivity<MainActivityBinding>() {
             nav.selectedItemId =
                 when (router.backstack.firstOrNull()?.controller) {
                     is RecentsController -> R.id.nav_recents
+                    is KomgaBrowseController -> R.id.nav_library
+                    is GalleryBrowseController -> R.id.nav_browse
                     is BrowseController -> R.id.nav_browse
                     else -> R.id.nav_library
                 }
@@ -539,7 +523,7 @@ open class MainActivity : BaseActivity<MainActivityBinding>() {
             if (currentRoot?.tag()?.toIntOrNull() != id) {
                 setRoot(
                     when (id) {
-                        R.id.nav_library -> if (basePreferences.composeLibrary().get()) LibraryComposeController() else LibraryController()
+                        R.id.nav_library -> KomgaBrowseController()
                         R.id.nav_recents -> RecentsController()
                         else -> BrowseController()
                     },
@@ -712,14 +696,6 @@ open class MainActivity : BaseActivity<MainActivityBinding>() {
 
         splashScreen?.configure()
 
-        lifecycleScope.launchIO {
-            extensionManager.getExtensionUpdates(true)
-        }
-
-        preferences.extensionUpdatesCount()
-            .changesIn(lifecycleScope) {
-                setExtensionsBadge()
-            }
         preferences.incognitoMode()
             .changesIn(lifecycleScope) {
                 binding.toolbar.setIncognitoMode(it)
@@ -936,23 +912,9 @@ open class MainActivity : BaseActivity<MainActivityBinding>() {
         }
     }
 
-    private fun setExtensionsBadge() {
-        val updates = preferences.extensionUpdatesCount().get()
-        if (updates > 0) {
-            val badge = nav.getOrCreateBadge(R.id.nav_browse)
-            badge.number = updates
-        } else {
-            nav.removeBadge(R.id.nav_browse)
-        }
-    }
-
     override fun onResume() {
         super.onResume()
         checkForAppUpdates()
-        lifecycleScope.launchIO {
-            extensionManager.getExtensionUpdates(false)
-        }
-        setExtensionsBadge()
         showDLQueueTutorial()
         reEnableBackPressedCallBack()
     }

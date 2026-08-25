@@ -190,6 +190,18 @@ class ChapterCache(private val context: Context) {
     }
 
     /**
+     * Removes a cached image by its source URL.
+     */
+    fun removeImageFromCache(imageUrl: String): Boolean {
+        return try {
+            diskCache.remove(DiskUtil.hashKeyForDisk(imageUrl))
+        } catch (e: IOException) {
+            Logger.w(e) { "Failed to remove image from cache" }
+            false
+        }
+    }
+
+    /**
      * Get image file from url.
      *
      * @param imageUrl url of image.

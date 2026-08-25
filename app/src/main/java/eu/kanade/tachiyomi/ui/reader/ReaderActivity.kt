@@ -21,6 +21,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.text.TextUtils
+import android.text.format.Formatter
 import android.text.style.DynamicDrawableSpan
 import android.text.style.ImageSpan
 import android.view.GestureDetector
@@ -151,6 +152,9 @@ import eu.kanade.tachiyomi.widget.doOnStart
 import java.io.ByteArrayOutputStream
 import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.util.Collections
 import java.util.Locale
 import kotlin.math.abs
@@ -174,6 +178,8 @@ import yokai.domain.base.BasePreferences
 import yokai.domain.ui.settings.ReaderPreferences
 import yokai.domain.ui.settings.ReaderPreferences.LandscapeCutoutBehaviour
 import yokai.i18n.MR
+import yokai.source.gallery.GalleryKomganionSource
+import yokai.source.komga.KomgaSource
 import yokai.util.lang.getString
 import android.R as AR
 
@@ -205,6 +211,12 @@ class ReaderActivity : BaseActivity<ReaderActivityBinding>() {
     private var menuTemporarilyVisible = false
 
     private var coroutine: Job? = null
+
+    private var gallerySlideshowJob: Job? = null
+    private var gallerySlideshowRunning = false
+    private var galleryShuffleEnabled = false
+    private var galleryCurrentPageIndex = 0
+    private var galleryShuffleRemaining = mutableListOf<Int>()
 
     private var fromUrl = false
 
@@ -255,6 +267,8 @@ class ReaderActivity : BaseActivity<ReaderActivityBinding>() {
     private val basePreferences: BasePreferences by injectLazy()
 
     companion object {
+
+        private val GALLERY_SLIDESHOW_SPEEDS = listOf(2, 3, 5, 10, 15)
 
         const val SHIFT_DOUBLE_PAGES = "shiftingDoublePages"
         const val SHIFTED_PAGE_INDEX = "shiftedPageIndex"
@@ -525,6 +539,30 @@ class ReaderActivity : BaseActivity<ReaderActivityBinding>() {
     }
 
     override fun onPrepareOptionsMenu(menu: Menu): Boolean {
+        val supportsSlideshow = supportsSlideshow()
+        menu.findItem(R.id.action_gallery_slideshow)?.apply {
+            isVisible = supportsSlideshow
+            title = getString(
+                if (gallerySlideshowRunning) {
+                    MR.strings.pause_gallery_slideshow
+                } else {
+                    MR.strings.play_gallery_slideshow
+                },
+            )
+            setIcon(
+                if (gallerySlideshowRunning) {
+                    R.drawable.ic_pause_24dp
+                } else {
+                    R.drawable.ic_play_arrow_24dp
+                },
+            )
+        }
+        menu.findItem(R.id.action_gallery_shuffle)?.apply {
+            isVisible = supportsSlideshow
+            isChecked = galleryShuffleEnabled
+        }
+        menu.findItem(R.id.action_gallery_slideshow_speed)?.isVisible = supportsSlideshow
+
         val splitItem = menu.findItem(R.id.action_shift_double_page)
         splitItem?.isVisible = ((viewer as? PagerViewer)?.config?.doublePages ?: false) && !canShowSplitAtBottom()
         binding.chaptersSheet.shiftPageButton.isVisible = ((viewer as? PagerViewer)?.config?.doublePages ?: false) && canShowSplitAtBottom()
@@ -644,6 +682,17 @@ class ReaderActivity : BaseActivity<ReaderActivityBinding>() {
      */
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
+            R.id.action_gallery_slideshow -> {
+                toggleGallerySlideshow()
+            }
+            R.id.action_gallery_shuffle -> {
+                galleryShuffleEnabled = !galleryShuffleEnabled
+                resetGalleryShuffleQueue()
+                invalidateOptionsMenu()
+            }
+            R.id.action_gallery_slideshow_speed -> {
+                showGallerySlideshowSpeedPrompt()
+            }
             R.id.action_shift_double_page -> {
                 shiftDoublePages()
                 manuallyShiftedPages = true
@@ -1304,6 +1353,7 @@ class ReaderActivity : BaseActivity<ReaderActivityBinding>() {
     }
 
     override fun onPause() {
+        stopGallerySlideshow()
         viewModel.flushReadTimer()
         super.onPause()
     }
@@ -1311,6 +1361,127 @@ class ReaderActivity : BaseActivity<ReaderActivityBinding>() {
     override fun onResume() {
         super.onResume()
         viewModel.restartReadTimer()
+    }
+
+    private fun showGallerySlideshowSpeedPrompt() {
+        val speeds = GALLERY_SLIDESHOW_SPEEDS
+        val selectedSpeed = readerPreferences.gallerySlideshowIntervalSeconds().get()
+        val labels = speeds.map { seconds ->
+            getString(MR.strings.gallery_slideshow_seconds)
+                .replace("%1\$d", seconds.toString())
+        }.toTypedArray()
+
+        materialAlertDialog()
+            .setTitle(getString(MR.strings.gallery_slideshow_speed))
+            .setSingleChoiceItems(
+                labels,
+                speeds.indexOf(selectedSpeed).coerceAtLeast(0),
+            ) { dialog, selectedIndex ->
+                readerPreferences.gallerySlideshowIntervalSeconds()
+                    .set(speeds[selectedIndex])
+                dialog.dismiss()
+
+                if (gallerySlideshowRunning) {
+                    stopGallerySlideshow()
+                    startGallerySlideshow()
+                }
+            }
+            .setNegativeButton(AR.string.cancel, null)
+            .show()
+    }
+
+    private fun gallerySlideshowIntervalMs(): Long {
+        return readerPreferences.gallerySlideshowIntervalSeconds()
+            .get()
+            .coerceIn(GALLERY_SLIDESHOW_SPEEDS.first(), GALLERY_SLIDESHOW_SPEEDS.last())
+            .times(1_000L)
+    }
+
+    private fun toggleGallerySlideshow() {
+        if (gallerySlideshowRunning) {
+            stopGallerySlideshow()
+        } else {
+            startGallerySlideshow()
+        }
+    }
+
+    private fun supportsSlideshow(): Boolean {
+        return viewModel.source is GalleryKomganionSource ||
+            viewModel.source is KomgaSource
+    }
+
+    private fun startGallerySlideshow() {
+        if (!supportsSlideshow()) return
+
+        val pages = viewModel.getCurrentChapter()?.pages.orEmpty()
+        if (pages.size < 2) return
+
+        gallerySlideshowJob?.cancel()
+        gallerySlideshowRunning = true
+        resetGalleryShuffleQueue()
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        invalidateOptionsMenu()
+
+        gallerySlideshowJob = lifecycleScope.launch {
+            while (gallerySlideshowRunning) {
+                val currentPage = viewModel.getCurrentChapter()
+                    ?.pages
+                    ?.getOrNull(galleryCurrentPageIndex)
+
+                if (currentPage?.status !is Page.State.Ready) {
+                    delay(500)
+                    continue
+                }
+
+                delay(gallerySlideshowIntervalMs())
+                if (!gallerySlideshowRunning) break
+
+                val nextPage = nextGallerySlideshowPage()
+                if (nextPage == null) {
+                    stopGallerySlideshow(showFinished = true)
+                    break
+                }
+
+                viewer?.moveToPage(nextPage)
+            }
+        }
+    }
+
+    private fun stopGallerySlideshow(showFinished: Boolean = false) {
+        val wasRunning = gallerySlideshowRunning
+        gallerySlideshowRunning = false
+        gallerySlideshowJob?.cancel()
+        gallerySlideshowJob = null
+        window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+
+        if (wasRunning) {
+            invalidateOptionsMenu()
+            if (showFinished) {
+                toast(MR.strings.gallery_slideshow_finished)
+            }
+        }
+    }
+
+    private fun resetGalleryShuffleQueue() {
+        val pages = viewModel.getCurrentChapter()?.pages.orEmpty()
+        galleryShuffleRemaining = pages.indices
+            .filter { it != galleryCurrentPageIndex }
+            .shuffled()
+            .toMutableList()
+    }
+
+    private fun nextGallerySlideshowPage(): ReaderPage? {
+        val pages = viewModel.getCurrentChapter()?.pages.orEmpty()
+
+        if (galleryShuffleEnabled) {
+            while (galleryShuffleRemaining.isNotEmpty()) {
+                val index = galleryShuffleRemaining.removeAt(0)
+                pages.getOrNull(index)?.let { return it }
+            }
+            return null
+        }
+
+        return pages.getOrNull(galleryCurrentPageIndex + 1)
     }
 
     fun reloadChapters(doublePages: Boolean, force: Boolean = false) {
@@ -1487,8 +1658,13 @@ class ReaderActivity : BaseActivity<ReaderActivityBinding>() {
      */
     @SuppressLint("SetTextI18n")
     fun onPageSelected(page: ReaderPage, hasExtraPage: Boolean) {
+        galleryCurrentPageIndex = page.index
+        if (galleryShuffleEnabled) {
+            galleryShuffleRemaining.remove(page.index)
+        }
         viewModel.onPageSelected(page, hasExtraPage)
         val pages = page.chapter.pages ?: return
+        updateGalleryPageMetadata(page, pages)
 
         val currentPage = if (hasExtraPage) {
             val invertDoublePage = (viewer as? PagerViewer)?.config?.invertDoublePages ?: false
@@ -1530,6 +1706,10 @@ class ReaderActivity : BaseActivity<ReaderActivityBinding>() {
      * actions to perform is shown.
      */
     fun onPageLongTap(page: ReaderPage, extraPage: ReaderPage? = null) {
+        if (supportsSlideshow()) {
+            stopGallerySlideshow()
+        }
+
         val items = if (extraPage != null) {
             listOf(
                 MaterialMenuSheet.MenuSheetItem(
@@ -1591,6 +1771,25 @@ class ReaderActivity : BaseActivity<ReaderActivityBinding>() {
                     MR.strings.set_as_cover,
                 ),
             )
+        }.let { baseItems ->
+            when {
+                extraPage == null &&
+                    viewModel.source is GalleryKomganionSource -> {
+                    baseItems + MaterialMenuSheet.MenuSheetItem(
+                        8,
+                        R.drawable.ic_delete_24dp,
+                        MR.strings.move_image_to_trash,
+                    )
+                }
+                viewModel.source is KomgaSource -> {
+                    baseItems + MaterialMenuSheet.MenuSheetItem(
+                        9,
+                        R.drawable.ic_delete_24dp,
+                        MR.strings.delete_book_from_komga,
+                    )
+                }
+                else -> baseItems
+            }
         }
         MaterialMenuSheet(this, items) { _, item ->
             when (item) {
@@ -1600,6 +1799,8 @@ class ReaderActivity : BaseActivity<ReaderActivityBinding>() {
                 3 -> extraPage?.let { shareImage(it) }
                 4 -> extraPage?.let { saveImage(it) }
                 5 -> extraPage?.let { showSetCoverPrompt(it) }
+                8 -> showTrashGalleryPagePrompt(page)
+                9 -> showDeleteKomgaBookPrompt(page)
                 6, 7 -> extraPage?.let { secondPage ->
                     (viewer as? PagerViewer)?.let { viewer ->
                         val isLTR = (viewer !is R2LPagerViewer).xor(viewer.config.invertDoublePages)
@@ -1617,6 +1818,117 @@ class ReaderActivity : BaseActivity<ReaderActivityBinding>() {
         if (binding.chaptersSheet.root.sheetBehavior.isExpanded()) {
             binding.chaptersSheet.root.sheetBehavior?.collapse()
         }
+    }
+
+    private fun updateGalleryPageMetadata(
+        page: ReaderPage,
+        pages: List<ReaderPage>,
+    ) {
+        if (viewModel.source !is GalleryKomganionSource) return
+
+        binding.toolbar.title = page.displayName ?: viewModel.manga?.title
+
+        val details = buildList {
+            add("${page.number}/${pages.size}")
+            if (page.imageWidth != null && page.imageHeight != null) {
+                add("${page.imageWidth}×${page.imageHeight}")
+            }
+            page.sizeBytes?.let {
+                add(Formatter.formatFileSize(this@ReaderActivity, it))
+            }
+            page.modifiedAt
+                ?.let(::formatGalleryDate)
+                ?.let(::add)
+        }
+        binding.toolbar.subtitle = details.joinToString(" · ")
+    }
+
+    private fun formatGalleryDate(value: String): String? {
+        return runCatching {
+            DateTimeFormatter
+                .ofPattern("MMM d, yyyy h:mm a", Locale.getDefault())
+                .withZone(ZoneId.systemDefault())
+                .format(Instant.parse(value))
+        }.getOrNull()
+    }
+
+    private fun showTrashGalleryPagePrompt(page: ReaderPage) {
+        val source = viewModel.source as? GalleryKomganionSource ?: return
+        val galleryId = page.chapter.chapter.url
+            .substringAfter("/galleries/", "")
+            .substringBefore("/")
+
+        if (galleryId.isBlank()) return
+
+        materialAlertDialog()
+            .setTitle(getString(MR.strings.move_image_to_trash))
+            .setMessage(
+                getString(MR.strings.move_image_to_trash_confirm)
+                    .replace("%1\$s", page.displayName ?: "this image"),
+            )
+            .setPositiveButton(getString(MR.strings.move_image_to_trash)) { _, _ ->
+                lifecycleScope.launchIO {
+                    try {
+                        val result = source.trashPage(
+                            galleryId = galleryId,
+                            pageIndex = page.index,
+                        )
+
+                        if (result.remainingPages > 0) {
+                            viewModel.reloadCurrentChapterAfterPageDeletion(
+                                requestedPage = result.nextPageIndex ?: 0,
+                                deletedImageUrl = page.imageUrl,
+                            )
+                        }
+
+                        withUIContext {
+                            toast(MR.strings.image_moved_to_trash)
+                            if (result.remainingPages == 0) {
+                                finish()
+                            }
+                        }
+                    } catch (error: Throwable) {
+                        withUIContext {
+                            toast(error.message)
+                        }
+                    }
+                }
+            }
+            .setNegativeButton(AR.string.cancel, null)
+            .show()
+    }
+
+    private fun showDeleteKomgaBookPrompt(page: ReaderPage) {
+        val source = viewModel.source as? KomgaSource ?: return
+        val bookId = page.chapter.chapter.url.substringAfterLast('/')
+
+        if (bookId.isBlank()) return
+
+        val bookTitle = page.chapter.chapter.name.ifBlank { "this book" }
+
+        materialAlertDialog()
+            .setTitle(getString(MR.strings.delete_book_from_komga))
+            .setMessage(
+                getString(MR.strings.delete_book_from_komga_confirm)
+                    .replace("%1\$s", bookTitle),
+            )
+            .setPositiveButton(getString(MR.strings.delete_book_from_komga)) { _, _ ->
+                lifecycleScope.launchIO {
+                    try {
+                        source.deleteBook(bookId)
+                        withUIContext {
+                            toast(MR.strings.book_deleted_from_komga)
+                            finish()
+                        }
+                    } catch (error: Throwable) {
+                        withUIContext {
+                            toast(error.message)
+                        }
+                    }
+                }
+            }
+            .setNegativeButton(AR.string.cancel, null)
+            .show()
     }
 
     /**

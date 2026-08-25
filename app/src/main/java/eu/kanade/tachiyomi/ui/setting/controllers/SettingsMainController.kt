@@ -74,12 +74,6 @@ class SettingsMainController : SettingsLegacyController(), FloatingSearchInterfa
             onClick { navigateTo(SettingsDownloadController()) }
         }
         preference {
-            iconRes = R.drawable.ic_browse_outline_24dp
-            iconTint = tintColor
-            titleRes = MR.strings.browse
-            onClick { navigateTo(SettingsBrowseController()) }
-        }
-        preference {
             iconRes = R.drawable.ic_sync_24dp
             iconTint = tintColor
             titleRes = MR.strings.tracking
@@ -146,6 +140,6 @@ class SettingsMainController : SettingsLegacyController(), FloatingSearchInterfa
     }
 
     private companion object {
-        private const val URL_HELP = "https://tachiyomi.org/docs/guides/troubleshooting/"
+        private const val URL_HELP = "https://github.com/roddur99/yokai-komganion#readme"
     }
 }

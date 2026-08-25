@@ -35,6 +35,8 @@ import uy.kohesive.injekt.api.get
 import yokai.data.AndroidDatabaseHandler
 import yokai.data.Database
 import yokai.data.DatabaseHandler
+import yokai.data.connection.ConnectionTester
+import yokai.data.connection.CredentialStore
 import yokai.domain.SplashState
 import yokai.domain.storage.StorageManager
 
@@ -108,13 +110,16 @@ fun appModule(app: Application) = module {
                     ChuckerInterceptor.Builder(app)
                         .collector(ChuckerCollector(app))
                         .maxContentLength(250000L)
-                        .redactHeaders(emptySet())
+                        .redactHeaders(setOf("Authorization", "X-API-Key"))
                         .alwaysReadResponseBody(false)
                         .build(),
                 )
             }
         }
     }
+
+    single { CredentialStore(app) }
+    single { ConnectionTester(get()) }
 
     single { JavaScriptEngine(app) }
 

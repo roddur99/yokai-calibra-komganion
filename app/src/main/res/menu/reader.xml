@@ -3,6 +3,27 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <item
+        android:id="@+id/action_gallery_slideshow"
+        android:icon="@drawable/ic_play_arrow_24dp"
+        android:title="@string/play_gallery_slideshow"
+        android:visible="false"
+        app:showAsAction="ifRoom" />
+
+    <item
+        android:id="@+id/action_gallery_slideshow_speed"
+        android:title="@string/gallery_slideshow_speed"
+        android:visible="false"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_gallery_shuffle"
+        android:checkable="true"
+        android:icon="@drawable/ic_shuffle_24dp"
+        android:title="@string/shuffle_gallery_slideshow"
+        android:visible="false"
+        app:showAsAction="never" />
+
+    <item
         android:id="@+id/action_shift_double_page"
         android:icon="@drawable/ic_page_next_outline_24dp"
         android:title="@string/shift_one_page_over"

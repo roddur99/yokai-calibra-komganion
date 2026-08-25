@@ -9,6 +9,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import co.touchlab.kermit.Logger
 import com.hippo.unifile.UniFile
+import eu.kanade.tachiyomi.data.cache.ChapterCache
 import eu.kanade.tachiyomi.data.cache.CoverCache
 import eu.kanade.tachiyomi.data.database.models.Chapter
 import eu.kanade.tachiyomi.data.database.models.History
@@ -98,6 +99,7 @@ class ReaderViewModel(
     private val sourceManager: SourceManager = Injekt.get(),
     private val downloadManager: DownloadManager = Injekt.get(),
     private val coverCache: CoverCache = Injekt.get(),
+    private val chapterCache: ChapterCache = Injekt.get(),
     private val preferences: PreferencesHelper = Injekt.get(),
     private val chapterFilter: ChapterFilter = Injekt.get(),
     private val storageManager: StorageManager = Injekt.get(),
@@ -715,6 +717,34 @@ class ReaderViewModel(
      */
     fun getCurrentChapter(): ReaderChapter? {
         return state.value.viewerChapters?.currChapter
+    }
+
+    suspend fun reloadCurrentChapterAfterPageDeletion(
+        requestedPage: Int,
+        deletedImageUrl: String?,
+    ): Boolean {
+        val currentChapter = getCurrentChapter() ?: return false
+        val chapterLoader = loader ?: return false
+
+        return withIOContext {
+            deletedImageUrl?.let(chapterCache::removeImageFromCache)
+            currentChapter.pageLoader?.recycle()
+            currentChapter.pageLoader = null
+            currentChapter.state = ReaderChapter.State.Wait
+            chapterLoader.loadChapter(currentChapter)
+
+            val pages = currentChapter.pages.orEmpty()
+            if (pages.isEmpty()) {
+                return@withIOContext false
+            }
+
+            currentChapter.requestedPage = requestedPage.coerceIn(
+                0,
+                pages.lastIndex,
+            )
+            eventChannel.send(Event.ReloadMangaAndChapters)
+            true
+        }
     }
 
     fun getChapterUrl(mainChapter: Chapter? = null): String? {
