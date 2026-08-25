@@ -206,7 +206,7 @@ class GalleryKomganionSource : HttpSource() {
         return SManga.create().apply {
             url = "/api/v1/galleries/$id"
             title = this@toSManga.title
-            thumbnail_url = absoluteUrl(coverUrl)
+            thumbnail_url = coverUrl?.let(::absoluteUrl)
             author = null
             artist = null
             description = relativePath
@@ -241,7 +241,7 @@ private data class GalleryDto(
     val detectedAt: String,
     val status: String,
     val canDelete: Boolean,
-    val coverUrl: String,
+    val coverUrl: String? = null,
     val lastScannedAt: String? = null,
 )
 
