@@ -87,10 +87,11 @@ class GalleryKomganionSource : HttpSource() {
     override suspend fun getPageList(chapter: SChapter): List<Page> {
         val response = get<PageListResponse>(chapter.url)
         return response.items.map { page ->
+            val imageUrl = galleryImageUrl(page)
             GalleryPage(
                 index = page.pageIndex,
-                url = absoluteUrl(page.imageUrl),
-                imageUrl = absoluteUrl(page.imageUrl),
+                url = imageUrl,
+                imageUrl = imageUrl,
                 filename = page.filename,
                 modifiedAt = page.modifiedAt,
                 sizeBytes = page.sizeBytes,
@@ -164,6 +165,15 @@ class GalleryKomganionSource : HttpSource() {
     }
 
     private fun endpoint(path: String) = absoluteUrl(path).toHttpUrl()
+
+    private fun galleryImageUrl(page: PageDto): String {
+        return absoluteUrl(page.imageUrl)
+            .toHttpUrl()
+            .newBuilder()
+            .addQueryParameter("filename", page.filename)
+            .build()
+            .toString()
+    }
 
     private fun absoluteUrl(path: String): String {
         check(baseUrl.isNotBlank()) {
