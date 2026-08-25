@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import yokai.i18n.MR
+import yokai.source.gallery.GalleryKomganionSource
 import yokai.util.lang.getString
 
 class SourceManager(
@@ -44,7 +45,7 @@ class SourceManager(
         scope.launch {
             extensionManager.installedExtensionsFlow
                 .collectLatest { extensions ->
-                    val mutableMap = ConcurrentHashMap<Long, Source>(mapOf(LocalSource.ID to LocalSource(context)))
+                    val gallerySource = GalleryKomganionSource()\n                    val mutableMap = ConcurrentHashMap<Long, Source>(\n                        mapOf(\n                            LocalSource.ID to LocalSource(context),\n                            GalleryKomganionSource.ID to gallerySource,\n                        ),\n                    )
                     extensions.forEach { extension ->
                         extension.sources.forEach {
                             mutableMap[it.id] = it
