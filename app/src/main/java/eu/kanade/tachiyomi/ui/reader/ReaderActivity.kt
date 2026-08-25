@@ -183,8 +183,6 @@ import yokai.source.komga.KomgaSource
 import yokai.util.lang.getString
 import android.R as AR
 
-private const val GALLERY_SLIDESHOW_INTERVAL_MS = 5_000L
-
 /**
  * Activity containing the reader of Tachiyomi. This activity is mostly a container of the
  * viewers, to which calls from the view model or UI events are delegated.
@@ -269,6 +267,8 @@ class ReaderActivity : BaseActivity<ReaderActivityBinding>() {
     private val basePreferences: BasePreferences by injectLazy()
 
     companion object {
+
+        private val GALLERY_SLIDESHOW_SPEEDS = listOf(2, 3, 5, 10, 15)
 
         const val SHIFT_DOUBLE_PAGES = "shiftingDoublePages"
         const val SHIFTED_PAGE_INDEX = "shiftedPageIndex"
@@ -561,6 +561,7 @@ class ReaderActivity : BaseActivity<ReaderActivityBinding>() {
             isVisible = isGallery
             isChecked = galleryShuffleEnabled
         }
+        menu.findItem(R.id.action_gallery_slideshow_speed)?.isVisible = isGallery
 
         val splitItem = menu.findItem(R.id.action_shift_double_page)
         splitItem?.isVisible = ((viewer as? PagerViewer)?.config?.doublePages ?: false) && !canShowSplitAtBottom()
@@ -688,6 +689,9 @@ class ReaderActivity : BaseActivity<ReaderActivityBinding>() {
                 galleryShuffleEnabled = !galleryShuffleEnabled
                 resetGalleryShuffleQueue()
                 invalidateOptionsMenu()
+            }
+            R.id.action_gallery_slideshow_speed -> {
+                showGallerySlideshowSpeedPrompt()
             }
             R.id.action_shift_double_page -> {
                 shiftDoublePages()
@@ -1359,6 +1363,40 @@ class ReaderActivity : BaseActivity<ReaderActivityBinding>() {
         viewModel.restartReadTimer()
     }
 
+    private fun showGallerySlideshowSpeedPrompt() {
+        val speeds = GALLERY_SLIDESHOW_SPEEDS
+        val selectedSpeed = readerPreferences.gallerySlideshowIntervalSeconds().get()
+        val labels = speeds.map { seconds ->
+            getString(MR.strings.gallery_slideshow_seconds)
+                .replace("%1\$d", seconds.toString())
+        }.toTypedArray()
+
+        materialAlertDialog()
+            .setTitle(getString(MR.strings.gallery_slideshow_speed))
+            .setSingleChoiceItems(
+                labels,
+                speeds.indexOf(selectedSpeed).coerceAtLeast(0),
+            ) { dialog, selectedIndex ->
+                readerPreferences.gallerySlideshowIntervalSeconds()
+                    .set(speeds[selectedIndex])
+                dialog.dismiss()
+
+                if (gallerySlideshowRunning) {
+                    stopGallerySlideshow()
+                    startGallerySlideshow()
+                }
+            }
+            .setNegativeButton(AR.string.cancel, null)
+            .show()
+    }
+
+    private fun gallerySlideshowIntervalMs(): Long {
+        return readerPreferences.gallerySlideshowIntervalSeconds()
+            .get()
+            .coerceIn(GALLERY_SLIDESHOW_SPEEDS.first(), GALLERY_SLIDESHOW_SPEEDS.last())
+            .times(1_000L)
+    }
+
     private fun toggleGallerySlideshow() {
         if (gallerySlideshowRunning) {
             stopGallerySlideshow()
@@ -1390,7 +1428,7 @@ class ReaderActivity : BaseActivity<ReaderActivityBinding>() {
                     continue
                 }
 
-                delay(GALLERY_SLIDESHOW_INTERVAL_MS)
+                delay(gallerySlideshowIntervalMs())
                 if (!gallerySlideshowRunning) break
 
                 val nextPage = nextGallerySlideshowPage()
