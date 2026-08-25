@@ -1695,7 +1695,8 @@ class ReaderActivity : BaseActivity<ReaderActivityBinding>() {
 
                         if (result.remainingPages > 0) {
                             viewModel.reloadCurrentChapterAfterPageDeletion(
-                                result.nextPageIndex ?: 0,
+                                requestedPage = result.nextPageIndex ?: 0,
+                                deletedImageUrl = page.imageUrl,
                             )
                         }
 
