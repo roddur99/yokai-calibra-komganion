@@ -539,9 +539,9 @@ class ReaderActivity : BaseActivity<ReaderActivityBinding>() {
     }
 
     override fun onPrepareOptionsMenu(menu: Menu): Boolean {
-        val isGallery = viewModel.source is GalleryKomganionSource
+        val supportsSlideshow = supportsSlideshow()
         menu.findItem(R.id.action_gallery_slideshow)?.apply {
-            isVisible = isGallery
+            isVisible = supportsSlideshow
             title = getString(
                 if (gallerySlideshowRunning) {
                     MR.strings.pause_gallery_slideshow
@@ -558,10 +558,10 @@ class ReaderActivity : BaseActivity<ReaderActivityBinding>() {
             )
         }
         menu.findItem(R.id.action_gallery_shuffle)?.apply {
-            isVisible = isGallery
+            isVisible = supportsSlideshow
             isChecked = galleryShuffleEnabled
         }
-        menu.findItem(R.id.action_gallery_slideshow_speed)?.isVisible = isGallery
+        menu.findItem(R.id.action_gallery_slideshow_speed)?.isVisible = supportsSlideshow
 
         val splitItem = menu.findItem(R.id.action_shift_double_page)
         splitItem?.isVisible = ((viewer as? PagerViewer)?.config?.doublePages ?: false) && !canShowSplitAtBottom()
@@ -1405,8 +1405,13 @@ class ReaderActivity : BaseActivity<ReaderActivityBinding>() {
         }
     }
 
+    private fun supportsSlideshow(): Boolean {
+        return viewModel.source is GalleryKomganionSource ||
+            viewModel.source is KomgaSource
+    }
+
     private fun startGallerySlideshow() {
-        if (viewModel.source !is GalleryKomganionSource) return
+        if (!supportsSlideshow()) return
 
         val pages = viewModel.getCurrentChapter()?.pages.orEmpty()
         if (pages.size < 2) return
@@ -1701,7 +1706,7 @@ class ReaderActivity : BaseActivity<ReaderActivityBinding>() {
      * actions to perform is shown.
      */
     fun onPageLongTap(page: ReaderPage, extraPage: ReaderPage? = null) {
-        if (viewModel.source is GalleryKomganionSource) {
+        if (supportsSlideshow()) {
             stopGallerySlideshow()
         }
 
