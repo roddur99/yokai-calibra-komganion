@@ -1207,4 +1207,8 @@
     <string name="delete_book_from_komga">Delete book from Komga</string>
     <string name="delete_book_from_komga_confirm">Permanently delete “%1$s” from Komga? This may not be recoverable.</string>
     <string name="book_deleted_from_komga">Komga accepted the book deletion</string>
+    <string name="play_gallery_slideshow">Play slideshow</string>
+    <string name="pause_gallery_slideshow">Pause slideshow</string>
+    <string name="shuffle_gallery_slideshow">Shuffle slideshow</string>
+    <string name="gallery_slideshow_finished">Slideshow finished</string>
 </resources>
