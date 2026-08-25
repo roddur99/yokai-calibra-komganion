@@ -195,7 +195,7 @@ class GalleryKomganionSource : HttpSource() {
             author = null
             artist = null
             description = relativePath
-            genre = categoryPath.joinToString(", ").ifBlank { null }
+            genre = categoryPath.joinToString(", ").takeIf { it.isNotBlank() }
             status = SManga.COMPLETED
             initialized = true
         }
