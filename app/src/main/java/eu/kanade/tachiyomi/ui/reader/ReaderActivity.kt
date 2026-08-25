@@ -1682,10 +1682,8 @@ class ReaderActivity : BaseActivity<ReaderActivityBinding>() {
         materialAlertDialog()
             .setTitle(getString(MR.strings.move_image_to_trash))
             .setMessage(
-                getString(
-                    page.displayName ?: "this image",
-                    MR.strings.move_image_to_trash_confirm,
-                ),
+                getString(MR.strings.move_image_to_trash_confirm)
+                    .replace("%1\$s", page.displayName ?: "this image"),
             )
             .setPositiveButton(getString(MR.strings.move_image_to_trash)) { _, _ ->
                 lifecycleScope.launchIO {
