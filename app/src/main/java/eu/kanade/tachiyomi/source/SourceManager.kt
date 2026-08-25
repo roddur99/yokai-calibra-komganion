@@ -45,7 +45,13 @@ class SourceManager(
         scope.launch {
             extensionManager.installedExtensionsFlow
                 .collectLatest { extensions ->
-                    val gallerySource = GalleryKomganionSource()\n                    val mutableMap = ConcurrentHashMap<Long, Source>(\n                        mapOf(\n                            LocalSource.ID to LocalSource(context),\n                            GalleryKomganionSource.ID to gallerySource,\n                        ),\n                    )
+                    val gallerySource = GalleryKomganionSource()
+                    val mutableMap = ConcurrentHashMap<Long, Source>(
+                        mapOf(
+                            LocalSource.ID to LocalSource(context),
+                            GalleryKomganionSource.ID to gallerySource,
+                        ),
+                    )
                     extensions.forEach { extension ->
                         extension.sources.forEach {
                             mutableMap[it.id] = it
