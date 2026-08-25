@@ -74,6 +74,7 @@ import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import uy.kohesive.injekt.injectLazy
 import yokai.domain.category.interactor.GetCategories
+import yokai.domain.chapter.interactor.DeleteChapter
 import yokai.domain.chapter.interactor.GetChapter
 import yokai.domain.chapter.interactor.InsertChapter
 import yokai.domain.chapter.interactor.UpdateChapter
@@ -107,6 +108,7 @@ class ReaderViewModel(
     private val libraryPreferences: LibraryPreferences = Injekt.get(),
 ) : ViewModel() {
     private val getCategories: GetCategories by injectLazy()
+    private val deleteChapter: DeleteChapter by injectLazy()
     private val getChapter: GetChapter by injectLazy()
     private val insertChapter: InsertChapter by injectLazy()
     private val updateChapter: UpdateChapter by injectLazy()
@@ -265,6 +267,11 @@ class ReaderViewModel(
             chapterFilter.filterChaptersForReader(dbChapters, manga, selectedChapter)
         val chapterSort = ChapterSort(manga, chapterFilter, preferences)
         return chaptersForReader.sortedWith(chapterSort.sortComparator(true)).map(::ReaderChapter)
+    }
+
+    suspend fun removeCurrentChapterAfterRemoteDelete() {
+        val chapter = getCurrentChapter()?.chapter ?: return
+        deleteChapter.await(chapter)
     }
 
     suspend fun getChapters(): List<ReaderChapterItem> {
