@@ -125,7 +125,7 @@ class GalleryKomganionSource : HttpSource() {
         )
 
         return MangasPage(
-            mangas = response.items.map(GalleryDto::toSManga),
+            mangas = response.items.map { it.toSManga() },
             hasNextPage = offset + response.items.size < response.total,
         )
     }
