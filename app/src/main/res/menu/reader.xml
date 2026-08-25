@@ -10,6 +10,12 @@
         app:showAsAction="ifRoom" />
 
     <item
+        android:id="@+id/action_gallery_slideshow_speed"
+        android:title="@string/gallery_slideshow_speed"
+        android:visible="false"
+        app:showAsAction="never" />
+
+    <item
         android:id="@+id/action_gallery_shuffle"
         android:checkable="true"
         android:icon="@drawable/ic_shuffle_24dp"
