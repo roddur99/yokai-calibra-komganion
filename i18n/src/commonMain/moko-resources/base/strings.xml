@@ -1204,4 +1204,7 @@
     <string name="move_image_to_trash">Move image to trash</string>
     <string name="move_image_to_trash_confirm">Move “%1$s” to the Gallery Komganion trash folder?</string>
     <string name="image_moved_to_trash">Image moved to trash</string>
+    <string name="delete_book_from_komga">Delete book from Komga</string>
+    <string name="delete_book_from_komga_confirm">Permanently delete “%1$s” from Komga? This may not be recoverable.</string>
+    <string name="book_deleted_from_komga">Komga accepted the book deletion</string>
 </resources>
