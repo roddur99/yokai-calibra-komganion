@@ -1680,14 +1680,14 @@ class ReaderActivity : BaseActivity<ReaderActivityBinding>() {
         if (galleryId.isBlank()) return
 
         materialAlertDialog()
-            .setTitle(MR.strings.move_image_to_trash)
+            .setTitle(getString(MR.strings.move_image_to_trash))
             .setMessage(
                 getString(
-                    MR.strings.move_image_to_trash_confirm,
                     page.displayName ?: "this image",
+                    MR.strings.move_image_to_trash_confirm,
                 ),
             )
-            .setPositiveButton(MR.strings.move_image_to_trash) { _, _ ->
+            .setPositiveButton(getString(MR.strings.move_image_to_trash)) { _, _ ->
                 lifecycleScope.launchIO {
                     try {
                         val result = source.trashPage(
