@@ -5,7 +5,7 @@
             android:checked="true"
             android:id="@+id/nav_library"
             android:icon="@drawable/ic_library_selector_24dp"
-            android:title="@string/library" />
+            android:title="@string/komga" />
         <item
             android:id="@+id/nav_recents"
             android:icon="@drawable/ic_recents_selector_24dp"
