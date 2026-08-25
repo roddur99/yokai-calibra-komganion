@@ -179,6 +179,7 @@ import yokai.domain.ui.settings.ReaderPreferences
 import yokai.domain.ui.settings.ReaderPreferences.LandscapeCutoutBehaviour
 import yokai.i18n.MR
 import yokai.source.gallery.GalleryKomganionSource
+import yokai.source.komga.KomgaSource
 import yokai.util.lang.getString
 import android.R as AR
 
@@ -1598,17 +1599,23 @@ class ReaderActivity : BaseActivity<ReaderActivityBinding>() {
                 ),
             )
         }.let { baseItems ->
-            if (
+            when {
                 extraPage == null &&
-                viewModel.source is GalleryKomganionSource
-            ) {
-                baseItems + MaterialMenuSheet.MenuSheetItem(
-                    8,
-                    R.drawable.ic_delete_24dp,
-                    MR.strings.move_image_to_trash,
-                )
-            } else {
-                baseItems
+                    viewModel.source is GalleryKomganionSource -> {
+                    baseItems + MaterialMenuSheet.MenuSheetItem(
+                        8,
+                        R.drawable.ic_delete_24dp,
+                        MR.strings.move_image_to_trash,
+                    )
+                }
+                viewModel.source is KomgaSource -> {
+                    baseItems + MaterialMenuSheet.MenuSheetItem(
+                        9,
+                        R.drawable.ic_delete_24dp,
+                        MR.strings.delete_book_from_komga,
+                    )
+                }
+                else -> baseItems
             }
         }
         MaterialMenuSheet(this, items) { _, item ->
@@ -1620,6 +1627,7 @@ class ReaderActivity : BaseActivity<ReaderActivityBinding>() {
                 4 -> extraPage?.let { saveImage(it) }
                 5 -> extraPage?.let { showSetCoverPrompt(it) }
                 8 -> showTrashGalleryPagePrompt(page)
+                9 -> showDeleteKomgaBookPrompt(page)
                 6, 7 -> extraPage?.let { secondPage ->
                     (viewer as? PagerViewer)?.let { viewer ->
                         val isLTR = (viewer !is R2LPagerViewer).xor(viewer.config.invertDoublePages)
@@ -1705,6 +1713,39 @@ class ReaderActivity : BaseActivity<ReaderActivityBinding>() {
                             if (result.remainingPages == 0) {
                                 finish()
                             }
+                        }
+                    } catch (error: Throwable) {
+                        withUIContext {
+                            toast(error.message)
+                        }
+                    }
+                }
+            }
+            .setNegativeButton(AR.string.cancel, null)
+            .show()
+    }
+
+    private fun showDeleteKomgaBookPrompt(page: ReaderPage) {
+        val source = viewModel.source as? KomgaSource ?: return
+        val bookId = page.chapter.chapter.url.substringAfterLast('/')
+
+        if (bookId.isBlank()) return
+
+        val bookTitle = page.chapter.chapter.name.ifBlank { "this book" }
+
+        materialAlertDialog()
+            .setTitle(getString(MR.strings.delete_book_from_komga))
+            .setMessage(
+                getString(MR.strings.delete_book_from_komga_confirm)
+                    .replace("%1\$s", bookTitle),
+            )
+            .setPositiveButton(getString(MR.strings.delete_book_from_komga)) { _, _ ->
+                lifecycleScope.launchIO {
+                    try {
+                        source.deleteBook(bookId)
+                        withUIContext {
+                            toast(MR.strings.book_deleted_from_komga)
+                            finish()
                         }
                     } catch (error: Throwable) {
                         withUIContext {
