@@ -150,6 +150,7 @@ import yokai.i18n.MR
 import yokai.presentation.core.Constants
 import yokai.presentation.extension.repo.ExtensionRepoController
 import yokai.presentation.gallery.GalleryBrowseController
+import yokai.presentation.komga.KomgaBrowseController
 import yokai.presentation.onboarding.OnboardingController
 import yokai.util.lang.getString
 import android.R as AR
@@ -518,6 +519,7 @@ open class MainActivity : BaseActivity<MainActivityBinding>() {
             nav.selectedItemId =
                 when (router.backstack.firstOrNull()?.controller) {
                     is RecentsController -> R.id.nav_recents
+                    is KomgaBrowseController -> R.id.nav_library
                     is GalleryBrowseController -> R.id.nav_browse
                     is BrowseController -> R.id.nav_browse
                     else -> R.id.nav_library
@@ -541,7 +543,7 @@ open class MainActivity : BaseActivity<MainActivityBinding>() {
             if (currentRoot?.tag()?.toIntOrNull() != id) {
                 setRoot(
                     when (id) {
-                        R.id.nav_library -> if (basePreferences.composeLibrary().get()) LibraryComposeController() else LibraryController()
+                        R.id.nav_library -> KomgaBrowseController()
                         R.id.nav_recents -> RecentsController()
                         else -> BrowseController()
                     },
