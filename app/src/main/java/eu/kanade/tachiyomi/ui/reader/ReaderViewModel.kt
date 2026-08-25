@@ -738,7 +738,7 @@ class ReaderViewModel(
                 0,
                 pages.lastIndex,
             )
-            eventChannel.send(Event.ReloadViewerChapters)
+            eventChannel.send(Event.ReloadMangaAndChapters)
             true
         }
     }
