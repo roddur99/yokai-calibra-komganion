@@ -717,6 +717,32 @@ class ReaderViewModel(
         return state.value.viewerChapters?.currChapter
     }
 
+    suspend fun reloadCurrentChapterAfterPageDeletion(
+        requestedPage: Int,
+    ): Boolean {
+        val currentChapter = getCurrentChapter() ?: return false
+        val chapterLoader = loader ?: return false
+
+        return withIOContext {
+            currentChapter.pageLoader?.recycle()
+            currentChapter.pageLoader = null
+            currentChapter.state = ReaderChapter.State.Wait
+            chapterLoader.loadChapter(currentChapter)
+
+            val pages = currentChapter.pages.orEmpty()
+            if (pages.isEmpty()) {
+                return@withIOContext false
+            }
+
+            currentChapter.requestedPage = requestedPage.coerceIn(
+                0,
+                pages.lastIndex,
+            )
+            eventChannel.send(Event.ReloadViewerChapters)
+            true
+        }
+    }
+
     fun getChapterUrl(mainChapter: Chapter? = null): String? {
         val manga = manga ?: return null
         val source = getSource() ?: return null
