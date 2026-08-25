@@ -9,7 +9,6 @@ import okhttp3.Dns
 import okhttp3.HttpUrl
 import okhttp3.Request
 import okhttp3.Response
-import okhttp3.internal.closeQuietly
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import yokai.domain.connection.ConnectionTestResult
 import yokai.domain.connection.KomgaAuthMethod
