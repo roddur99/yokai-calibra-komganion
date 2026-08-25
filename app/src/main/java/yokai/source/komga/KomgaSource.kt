@@ -135,6 +135,16 @@ class KomgaSource : HttpSource() {
         }
     }
 
+    suspend fun deleteBook(bookId: String) {
+        val request = Request.Builder()
+            .url(endpoint("/api/v1/books/$bookId/file"))
+            .headers(headers)
+            .delete()
+            .build()
+
+        client.newCall(request).awaitSuccess().close()
+    }
+
     private suspend fun getSeriesPage(
         page: Int,
         query: String,
