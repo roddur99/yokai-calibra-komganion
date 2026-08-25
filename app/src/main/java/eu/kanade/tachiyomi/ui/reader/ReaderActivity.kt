@@ -183,6 +183,8 @@ import yokai.source.komga.KomgaSource
 import yokai.util.lang.getString
 import android.R as AR
 
+private const val GALLERY_SLIDESHOW_INTERVAL_MS = 5_000L
+
 /**
  * Activity containing the reader of Tachiyomi. This activity is mostly a container of the
  * viewers, to which calls from the view model or UI events are delegated.
@@ -211,6 +213,12 @@ class ReaderActivity : BaseActivity<ReaderActivityBinding>() {
     private var menuTemporarilyVisible = false
 
     private var coroutine: Job? = null
+
+    private var gallerySlideshowJob: Job? = null
+    private var gallerySlideshowRunning = false
+    private var galleryShuffleEnabled = false
+    private var galleryCurrentPageIndex = 0
+    private var galleryShuffleRemaining = mutableListOf<Int>()
 
     private var fromUrl = false
 
@@ -531,6 +539,29 @@ class ReaderActivity : BaseActivity<ReaderActivityBinding>() {
     }
 
     override fun onPrepareOptionsMenu(menu: Menu): Boolean {
+        val isGallery = viewModel.source is GalleryKomganionSource
+        menu.findItem(R.id.action_gallery_slideshow)?.apply {
+            isVisible = isGallery
+            title = getString(
+                if (gallerySlideshowRunning) {
+                    MR.strings.pause_gallery_slideshow
+                } else {
+                    MR.strings.play_gallery_slideshow
+                },
+            )
+            setIcon(
+                if (gallerySlideshowRunning) {
+                    R.drawable.ic_pause_24dp
+                } else {
+                    R.drawable.ic_play_arrow_24dp
+                },
+            )
+        }
+        menu.findItem(R.id.action_gallery_shuffle)?.apply {
+            isVisible = isGallery
+            isChecked = galleryShuffleEnabled
+        }
+
         val splitItem = menu.findItem(R.id.action_shift_double_page)
         splitItem?.isVisible = ((viewer as? PagerViewer)?.config?.doublePages ?: false) && !canShowSplitAtBottom()
         binding.chaptersSheet.shiftPageButton.isVisible = ((viewer as? PagerViewer)?.config?.doublePages ?: false) && canShowSplitAtBottom()
@@ -650,6 +681,14 @@ class ReaderActivity : BaseActivity<ReaderActivityBinding>() {
      */
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
+            R.id.action_gallery_slideshow -> {
+                toggleGallerySlideshow()
+            }
+            R.id.action_gallery_shuffle -> {
+                galleryShuffleEnabled = !galleryShuffleEnabled
+                resetGalleryShuffleQueue()
+                invalidateOptionsMenu()
+            }
             R.id.action_shift_double_page -> {
                 shiftDoublePages()
                 manuallyShiftedPages = true
@@ -1310,6 +1349,7 @@ class ReaderActivity : BaseActivity<ReaderActivityBinding>() {
     }
 
     override fun onPause() {
+        stopGallerySlideshow()
         viewModel.flushReadTimer()
         super.onPause()
     }
@@ -1317,6 +1357,88 @@ class ReaderActivity : BaseActivity<ReaderActivityBinding>() {
     override fun onResume() {
         super.onResume()
         viewModel.restartReadTimer()
+    }
+
+    private fun toggleGallerySlideshow() {
+        if (gallerySlideshowRunning) {
+            stopGallerySlideshow()
+        } else {
+            startGallerySlideshow()
+        }
+    }
+
+    private fun startGallerySlideshow() {
+        if (viewModel.source !is GalleryKomganionSource) return
+
+        val pages = viewModel.getCurrentChapter()?.pages.orEmpty()
+        if (pages.size < 2) return
+
+        gallerySlideshowJob?.cancel()
+        gallerySlideshowRunning = true
+        resetGalleryShuffleQueue()
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        invalidateOptionsMenu()
+
+        gallerySlideshowJob = lifecycleScope.launch {
+            while (gallerySlideshowRunning) {
+                val currentPage = viewModel.getCurrentChapter()
+                    ?.pages
+                    ?.getOrNull(galleryCurrentPageIndex)
+
+                if (currentPage?.status !is Page.State.Ready) {
+                    delay(500)
+                    continue
+                }
+
+                delay(GALLERY_SLIDESHOW_INTERVAL_MS)
+                if (!gallerySlideshowRunning) break
+
+                val nextPage = nextGallerySlideshowPage()
+                if (nextPage == null) {
+                    stopGallerySlideshow(showFinished = true)
+                    break
+                }
+
+                viewer?.moveToPage(nextPage)
+            }
+        }
+    }
+
+    private fun stopGallerySlideshow(showFinished: Boolean = false) {
+        val wasRunning = gallerySlideshowRunning
+        gallerySlideshowRunning = false
+        gallerySlideshowJob?.cancel()
+        gallerySlideshowJob = null
+        window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+
+        if (wasRunning) {
+            invalidateOptionsMenu()
+            if (showFinished) {
+                toast(MR.strings.gallery_slideshow_finished)
+            }
+        }
+    }
+
+    private fun resetGalleryShuffleQueue() {
+        val pages = viewModel.getCurrentChapter()?.pages.orEmpty()
+        galleryShuffleRemaining = pages.indices
+            .filter { it != galleryCurrentPageIndex }
+            .shuffled()
+            .toMutableList()
+    }
+
+    private fun nextGallerySlideshowPage(): ReaderPage? {
+        val pages = viewModel.getCurrentChapter()?.pages.orEmpty()
+
+        if (galleryShuffleEnabled) {
+            while (galleryShuffleRemaining.isNotEmpty()) {
+                val index = galleryShuffleRemaining.removeAt(0)
+                pages.getOrNull(index)?.let { return it }
+            }
+            return null
+        }
+
+        return pages.getOrNull(galleryCurrentPageIndex + 1)
     }
 
     fun reloadChapters(doublePages: Boolean, force: Boolean = false) {
@@ -1493,6 +1615,10 @@ class ReaderActivity : BaseActivity<ReaderActivityBinding>() {
      */
     @SuppressLint("SetTextI18n")
     fun onPageSelected(page: ReaderPage, hasExtraPage: Boolean) {
+        galleryCurrentPageIndex = page.index
+        if (galleryShuffleEnabled) {
+            galleryShuffleRemaining.remove(page.index)
+        }
         viewModel.onPageSelected(page, hasExtraPage)
         val pages = page.chapter.pages ?: return
         updateGalleryPageMetadata(page, pages)
@@ -1537,6 +1663,10 @@ class ReaderActivity : BaseActivity<ReaderActivityBinding>() {
      * actions to perform is shown.
      */
     fun onPageLongTap(page: ReaderPage, extraPage: ReaderPage? = null) {
+        if (viewModel.source is GalleryKomganionSource) {
+            stopGallerySlideshow()
+        }
+
         val items = if (extraPage != null) {
             listOf(
                 MaterialMenuSheet.MenuSheetItem(
