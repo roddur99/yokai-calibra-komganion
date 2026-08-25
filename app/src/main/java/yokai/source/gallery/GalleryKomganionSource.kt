@@ -87,10 +87,15 @@ class GalleryKomganionSource : HttpSource() {
     override suspend fun getPageList(chapter: SChapter): List<Page> {
         val response = get<PageListResponse>(chapter.url)
         return response.items.map { page ->
-            Page(
+            GalleryPage(
                 index = page.pageIndex,
                 url = absoluteUrl(page.imageUrl),
                 imageUrl = absoluteUrl(page.imageUrl),
+                filename = page.filename,
+                modifiedAt = page.modifiedAt,
+                sizeBytes = page.sizeBytes,
+                width = page.width,
+                height = page.height,
             )
         }
     }
@@ -128,6 +133,18 @@ class GalleryKomganionSource : HttpSource() {
             mangas = response.items.map { it.toSManga() },
             hasNextPage = offset + response.items.size < response.total,
         )
+    }
+
+    suspend fun trashPage(
+        galleryId: String,
+        pageIndex: Int,
+    ): TrashedPageResponse {
+        val request = Request.Builder()
+            .url(endpoint("/api/v1/galleries/$galleryId/pages/$pageIndex"))
+            .headers(headers)
+            .delete()
+            .build()
+        return execute(request)
     }
 
     private suspend inline fun <reified T> get(path: String): T {
@@ -239,9 +256,31 @@ private data class PageDto(
     val pageIndex: Int,
     val filename: String,
     val sizeBytes: Long,
+    val modifiedAt: String,
     val mimeType: String,
     val width: Int? = null,
     val height: Int? = null,
     val imageUrl: String,
     val thumbnailUrl: String,
 )
+
+class GalleryPage(
+    index: Int,
+    url: String,
+    imageUrl: String,
+    val filename: String,
+    val modifiedAt: String,
+    val sizeBytes: Long,
+    val width: Int?,
+    val height: Int?,
+) : Page(index, url, imageUrl)
+
+@Serializable
+data class TrashedPageResponse(
+    val galleryId: String,
+    val filename: String,
+    val trashRelativePath: String,
+    val remainingPages: Int,
+    val nextPageIndex: Int?,
+)
+
