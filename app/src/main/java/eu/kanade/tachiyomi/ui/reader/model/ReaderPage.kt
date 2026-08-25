@@ -11,6 +11,11 @@ open class ReaderPage(
     var stream: (() -> InputStream)? = null,
     var bg: Drawable? = null,
     var bgType: Int? = null,
+    val displayName: String? = null,
+    val modifiedAt: String? = null,
+    val sizeBytes: Long? = null,
+    val imageWidth: Int? = null,
+    val imageHeight: Int? = null,
 ) : Page(index, url, imageUrl, null), ReaderItem {
 
     /** Value to check if this page is used to as if it was too wide */
