@@ -86,8 +86,8 @@ The roadmap is intentionally incremental. Version assignments may change as feat
 | Version | Planned focus |
 |---|---|
 | **v0.1.2 — shipped** | Komga book covers, loading/error placeholders, and covers in the reader chapter sheet. |
-| **v0.1.3** | Local activity dashboard foundation: reading sessions, weekly totals, recent completions, source usage, monthly history, and completion calendar. |
-| **v0.1.4** | Rating filters, score sorting, note search, series averages, recently rated books, and an optional post-finish rating prompt. |
+| **v0.1.3** | Score sorting, rated/unrated and has-notes filters, and a recently rated view. |
+| **v0.1.4** | Local activity dashboard foundation: reading sessions, weekly totals, recent completions, source usage, monthly history, completion calendar, series averages, and an optional post-finish rating prompt. |
 | **v0.1.5** | Reading queue, improved shuffle, cross-item playback, and delete-then-advance workflows. |
 | **v0.2.0** | Optional multi-device synchronization through Gallery Komganion for annotations, activity, completions, bookmarks, and queue state. |
 | **Later** | Page-level notes and bookmarks, richer statistics, and other features guided by real usage. |
