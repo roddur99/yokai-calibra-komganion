@@ -184,6 +184,9 @@ dependencies {
 
     implementation(libs.material)
 
+    // Reflowable EPUB reader
+    implementation(libs.bundles.readium)
+
     // Android X libraries
     implementation(androidx.bundles.androidx)
 
