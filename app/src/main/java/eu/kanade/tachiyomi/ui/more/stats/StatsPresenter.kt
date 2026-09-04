@@ -26,6 +26,8 @@ import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import uy.kohesive.injekt.injectLazy
 import yokai.data.DatabaseHandler
+import yokai.data.calibre.CalibreEpubStore
+import yokai.data.calibre.CalibreLibraryStatsStore
 import yokai.data.calibre.CalibreReadingSource
 import yokai.domain.activity.ReadingActivityRepository
 import yokai.domain.activity.model.ReadingActivity
@@ -55,6 +57,8 @@ class StatsPresenter(
     private val komgaBookAnnotationRepository: KomgaBookAnnotationRepository by injectLazy()
     private val getManga: GetManga by injectLazy()
     private val getChapter: GetChapter by injectLazy()
+    private val calibreEpubStore: CalibreEpubStore by injectLazy()
+    private val calibreLibraryStatsStore: CalibreLibraryStatsStore by injectLazy()
 
     private val focusedMangas = runBlocking { getManga.awaitAll() }
         .filter { it.source == KomgaSource.ID || it.source == GalleryKomganionSource.ID }
@@ -87,6 +91,24 @@ class StatsPresenter(
     fun getRatedBookCount(): Int = getAnnotationScores().size
 
     fun getRecordedSessionCount(): Int = getActivitySessions().size
+
+    fun getCalibreAvailableCount(): Int = calibreLibraryStatsStore.availableCount()
+
+    fun getCalibreDownloadedCount(): Int = calibreEpubStore.downloadedCount()
+
+    fun getCalibreStartedCount(): Int =
+        getActivitySessions()
+            .asSequence()
+            .filter { it.sourceId == CalibreReadingSource.ID }
+            .distinctBy { it.itemKey }
+            .count()
+
+    fun getCalibreCompletedCount(): Int =
+        getActivitySessions()
+            .asSequence()
+            .filter { it.sourceId == CalibreReadingSource.ID && it.completed }
+            .distinctBy { it.itemKey }
+            .count()
 
     fun getTracks(manga: Manga): MutableList<Track> {
         return runBlocking { getTrack.awaitAllByMangaId(manga.id) }.toMutableList()
