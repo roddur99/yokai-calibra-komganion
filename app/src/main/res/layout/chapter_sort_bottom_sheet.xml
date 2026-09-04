@@ -83,6 +83,73 @@
                 android:text="@string/by_update_date"
                 android:layout_height="wrap_content"/>
 
+            <eu.kanade.tachiyomi.widget.SortTextView
+                android:id="@+id/by_score"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="By score"
+                android:visibility="gone" />
+
+            <LinearLayout
+                android:id="@+id/komga_annotation_filters"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <com.google.android.material.textview.MaterialTextView
+                    style="?textAppearanceHeadlineSmall"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="12dp"
+                    android:text="Ratings and notes" />
+
+                <RadioGroup
+                    android:id="@+id/rating_filter"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <com.google.android.material.radiobutton.MaterialRadioButton
+                        android:id="@+id/filter_all_ratings"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginHorizontal="12dp"
+                        android:text="All books" />
+
+                    <com.google.android.material.radiobutton.MaterialRadioButton
+                        android:id="@+id/filter_rated"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginHorizontal="12dp"
+                        android:text="Rated books" />
+
+                    <com.google.android.material.radiobutton.MaterialRadioButton
+                        android:id="@+id/filter_unrated"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginHorizontal="12dp"
+                        android:text="Unrated books" />
+                </RadioGroup>
+
+                <com.google.android.material.checkbox.MaterialCheckBox
+                    android:id="@+id/filter_has_notes"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="12dp"
+                    android:text="Has notes" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/recently_rated"
+                    style="@style/Theme.Widget.Button.TextButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="12dp"
+                    android:text="Recently rated" />
+            </LinearLayout>
+
             <include layout="@layout/chapter_filter_layout"
                 android:id="@+id/chapter_filter_layout"
                 android:layout_width="match_parent"
