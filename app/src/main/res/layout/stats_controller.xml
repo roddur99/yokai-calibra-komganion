@@ -173,7 +173,7 @@
                     android:layout_gravity="bottom|center_horizontal"
                     android:layout_marginTop="@dimen/marginClose"
                     android:gravity="center"
-                    android:text="@string/titles_in_library" />
+                    android:text="Indexed titles" />
 
             </LinearLayout>
 
@@ -200,7 +200,7 @@
                     android:layout_gravity="bottom|center_horizontal"
                     android:layout_marginTop="@dimen/marginClose"
                     android:gravity="center"
-                    android:text="@string/total_chapters" />
+                    android:text="Indexed books" />
 
             </LinearLayout>
 
@@ -227,7 +227,7 @@
                     android:layout_gravity="bottom|center_horizontal"
                     android:layout_marginTop="@dimen/marginClose"
                     android:gravity="center"
-                    android:text="@string/chapters_read" />
+                    android:text="Read books" />
 
             </LinearLayout>
 
@@ -258,7 +258,7 @@
                     android:layout_gravity="bottom|center_horizontal"
                     android:layout_marginTop="@dimen/marginClose"
                     android:gravity="center"
-                    android:text="@string/mean_tracking_score" />
+                    android:text="Mean score" />
 
             </LinearLayout>
 
@@ -293,7 +293,7 @@
                     android:layout_gravity="bottom|center_horizontal"
                     android:layout_marginTop="@dimen/marginClose"
                     android:gravity="center"
-                    android:text="@string/tracked_titles" />
+                    android:text="Rated books" />
 
             </LinearLayout>
 
@@ -320,7 +320,7 @@
                     android:layout_gravity="bottom|center_horizontal"
                     android:layout_marginTop="@dimen/marginClose"
                     android:gravity="center"
-                    android:text="@string/titles_in_global_update" />
+                    android:text="Recorded sessions" />
 
             </LinearLayout>
 
@@ -409,7 +409,7 @@
                     android:layout_gravity="bottom|center_horizontal"
                     android:layout_marginTop="@dimen/marginClose"
                     android:gravity="center"
-                    android:text="@string/local_titles" />
+                    android:text="Gallery titles" />
 
             </LinearLayout>
 
