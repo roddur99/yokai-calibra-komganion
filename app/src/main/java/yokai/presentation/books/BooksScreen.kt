@@ -56,6 +56,7 @@ fun BooksScreen(
     onRetry: () -> Unit,
     onDownload: (CalibreBook) -> Unit,
     onDeleteDownload: (CalibreBook) -> Unit,
+    onOpen: (CalibreBook) -> Unit,
 ) {
     var query by remember { mutableStateOf("") }
     var sort by remember { mutableStateOf(BookSort.SERIES) }
@@ -210,8 +211,19 @@ fun BooksScreen(
                 )
             },
             confirmButton = {
-                TextButton(onClick = { selected = null }) {
-                    Text("Close")
+                if (isDownloaded) {
+                    TextButton(
+                        onClick = {
+                            selected = null
+                            onOpen(book)
+                        },
+                    ) {
+                        Text("Open")
+                    }
+                } else {
+                    TextButton(onClick = { selected = null }) {
+                        Text("Close")
+                    }
                 }
             },
             dismissButton = {
