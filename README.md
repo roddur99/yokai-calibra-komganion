@@ -27,6 +27,8 @@ This fork currently adds or changes the following:
 ### Komga
 
 - Built-in Komga connection and browsing.
+- Individual Komga book covers in series chapter lists and the reader chapter sheet.
+  - Covers use loading and error placeholders and remain correctly associated during scrolling and deletion.
 - Reading through the existing Yōkai reader.
 - Whole-book deletion through Komga.
   - Deletion requires a Komga account with administrator permission.
@@ -77,9 +79,24 @@ The server and Android client are separate repositories:
 
 Do not expose a development server directly to the public internet. Use authentication and a trusted private network.
 
+## Planned feature timeline
+
+The roadmap is intentionally incremental. Version assignments may change as features are tested.
+
+| Version | Planned focus |
+|---|---|
+| **v0.1.2 — shipped** | Komga book covers, loading/error placeholders, and covers in the reader chapter sheet. |
+| **v0.1.3** | Local activity dashboard foundation: reading sessions, weekly totals, recent completions, source usage, monthly history, and completion calendar. |
+| **v0.1.4** | Rating filters, score sorting, note search, series averages, recently rated books, and an optional post-finish rating prompt. |
+| **v0.1.5** | Reading queue, improved shuffle, cross-item playback, and delete-then-advance workflows. |
+| **v0.2.0** | Optional multi-device synchronization through Gallery Komganion for annotations, activity, completions, bookmarks, and queue state. |
+| **Later** | Page-level notes and bookmarks, richer statistics, and other features guided by real usage. |
+
+Activity tracking will begin when the dashboard foundation ships. Time-spent and completion statistics will not claim historical accuracy for activity that occurred before tracking was introduced.
+
 ## Current status
 
-Version **0.1.1** builds successfully as an Android release. Komga and Gallery browsing, reading, deletion, metadata, slideshow, shuffle, playback-speed controls, local Komga book annotations, and annotation JSON recovery have been tested on Android devices and emulators.
+Version **0.1.2** adds individual Komga book covers to series chapter lists and the reader chapter sheet. Komga and Gallery browsing, reading, deletion, metadata, slideshow, shuffle, playback-speed controls, local Komga book annotations, annotation JSON recovery, and Komga cover row recycling have been tested on Android devices and emulators.
 
 Known follow-up work includes:
 

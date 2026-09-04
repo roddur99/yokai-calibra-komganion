@@ -135,6 +135,9 @@ class KomgaSource : HttpSource() {
         }
     }
 
+    fun getBookThumbnailUrl(bookId: String): String =
+        absoluteUrl("/api/v1/books/$bookId/thumbnail")
+
     suspend fun deleteBook(bookId: String) {
         val request = Request.Builder()
             .url(endpoint("/api/v1/books/$bookId/file"))
