@@ -96,6 +96,8 @@ import yokai.domain.chapter.interactor.GetChapter
 import yokai.domain.chapter.interactor.UpdateChapter
 import yokai.domain.history.interactor.GetHistory
 import yokai.domain.library.custom.model.CustomMangaInfo
+import yokai.domain.komga.annotation.KomgaBookAnnotationRepository
+import yokai.domain.komga.annotation.model.KomgaBookAnnotation
 import yokai.domain.manga.interactor.GetManga
 import yokai.domain.manga.interactor.UpdateManga
 import yokai.domain.manga.models.MangaUpdate
@@ -105,6 +107,7 @@ import yokai.domain.track.interactor.DeleteTrack
 import yokai.domain.track.interactor.GetTrack
 import yokai.domain.track.interactor.InsertTrack
 import yokai.i18n.MR
+import yokai.source.komga.KomgaSource
 import yokai.util.lang.getString
 
 class MangaDetailsPresenter(
@@ -127,6 +130,7 @@ class MangaDetailsPresenter(
     private val getTrack: GetTrack by injectLazy()
     private val insertTrack: InsertTrack by injectLazy()
     private val getHistory: GetHistory by injectLazy()
+    private val komgaBookAnnotationRepository: KomgaBookAnnotationRepository by injectLazy()
 
     private val networkPreferences: NetworkPreferences by injectLazy()
 
@@ -279,8 +283,19 @@ class MangaDetailsPresenter(
     }
 
     private suspend fun getChapters(queue: List<Download> = downloadManager.queueState.value) {
-        val chapters = getChapter.awaitAll(mangaId, isScanlatorFiltered()).map { it.toModel() }
-        allChapters = if (!isScanlatorFiltered()) chapters else getChapter.awaitAll(mangaId, false).map { it.toModel() }
+        val annotations = if (manga.source == KomgaSource.ID) {
+            komgaBookAnnotationRepository.getAll().associateBy { it.bookId }
+        } else {
+            emptyMap()
+        }
+        val chapters = getChapter.awaitAll(mangaId, isScanlatorFiltered())
+            .map { it.toModel(annotations[it.komgaBookId()]) }
+        allChapters = if (!isScanlatorFiltered()) {
+            chapters
+        } else {
+            getChapter.awaitAll(mangaId, false)
+                .map { it.toModel(annotations[it.komgaBookId()]) }
+        }
 
         // Find downloaded chapters
         setDownloadedChapters(chapters, queue)
@@ -312,10 +327,11 @@ class MangaDetailsPresenter(
     /**
      * Converts a chapter from the database to an extended model, allowing to store new fields.
      */
-    private fun Chapter.toModel(): ChapterItem {
+    private fun Chapter.toModel(annotation: KomgaBookAnnotation? = null): ChapterItem {
         // Create the model object.
         val model = ChapterItem(this, manga)
         model.isLocked = isLockedFromSearch
+        model.komgaAnnotation = annotation
 
         // Find an active download for this chapter.
         val download = downloadManager.queueState.value.find { it.chapter.id == id }
@@ -325,6 +341,45 @@ class MangaDetailsPresenter(
             model.download = download
         }
         return model
+    }
+
+    private fun Chapter.komgaBookId(): String? =
+        url.substringAfterLast('/').takeIf { it.isNotBlank() }
+
+    fun saveKomgaAnnotation(item: ChapterItem, score: Int?, notes: String) {
+        if (manga.source != KomgaSource.ID) return
+        val bookId = item.chapter.komgaBookId() ?: return
+        val normalizedNotes = notes.trim()
+
+        presenterScope.launchIO {
+            val existing = komgaBookAnnotationRepository.get(bookId)
+            val annotation = if (score == null && normalizedNotes.isBlank()) {
+                komgaBookAnnotationRepository.delete(bookId)
+                null
+            } else {
+                val now = System.currentTimeMillis()
+                KomgaBookAnnotation(
+                    bookId = bookId,
+                    score = score,
+                    notes = normalizedNotes,
+                    bookTitle = item.chapter.name,
+                    seriesTitle = manga.title,
+                    createdAt = existing?.createdAt ?: now,
+                    updatedAt = now,
+                ).also { komgaBookAnnotationRepository.upsert(it) }
+            }
+
+            allChapters
+                .filter { it.chapter.komgaBookId() == bookId }
+                .forEach { it.komgaAnnotation = annotation }
+            chapters
+                .filter { it.chapter.komgaBookId() == bookId }
+                .forEach { it.komgaAnnotation = annotation }
+
+            withUIContext {
+                view?.updateChapters()
+            }
+        }
     }
 
     /**
