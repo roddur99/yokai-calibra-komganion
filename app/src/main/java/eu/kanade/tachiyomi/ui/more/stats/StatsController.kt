@@ -73,12 +73,13 @@ class StatsController : BaseLegacyController<StatsControllerBinding>() {
 
     private fun handleGeneralStats() {
         val mangaTracks = mangaDistinct.map { it to presenter.getTracks(it.manga) }
-        scoresList = getScoresList(mangaTracks)
+        val annotationScores = presenter.getAnnotationScores()
+        scoresList = annotationScores.ifEmpty { getScoresList(mangaTracks) }
         with(binding) {
             viewDetailLayout.isVisible = mangaDistinct.isNotEmpty()
-            statsTotalMangaText.text = mangaDistinct.count().toString()
-            statsTotalChaptersText.text = mangaDistinct.sumOf { it.totalChapters }.toString()
-            statsChaptersReadText.text = mangaDistinct.sumOf { it.read }.toString()
+            statsTotalMangaText.text = presenter.getFocusedTitleCount().toString()
+            statsTotalChaptersText.text = presenter.getFocusedChapterCount().toString()
+            statsChaptersReadText.text = presenter.getFocusedReadChapterCount().toString()
             statsMangaMeanScoreText.text = if (scoresList.isEmpty()) {
                 statsMangaMeanScoreText.setCompoundDrawablesWithIntrinsicBounds(0, 0, 0, 0)
                 activity?.getString(MR.strings.none)
@@ -88,7 +89,7 @@ class StatsController : BaseLegacyController<StatsControllerBinding>() {
             statsTrackedMangaText.text = mangaTracks.count { it.second.isNotEmpty() }.toString()
             statsChaptersDownloadedText.text = mangaDistinct.sumOf { presenter.getDownloadCount(it) }.toString()
             statsTotalTagsText.text = mangaDistinct.flatMap { it.manga.getTags() }.distinct().count().toString()
-            statsMangaLocalText.text = mangaDistinct.count { it.manga.isLocal() }.toString()
+            statsMangaLocalText.text = presenter.getFocusedGalleryCount().toString()
             statsGlobalUpdateMangaText.text = presenter.getGlobalUpdateManga().count().toString()
             statsSourcesText.text = presenter.getSources().count().toString()
             statsTrackersText.text = presenter.getLoggedTrackers().count().toString()
