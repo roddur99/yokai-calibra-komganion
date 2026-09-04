@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -17,6 +18,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -44,6 +46,8 @@ import yokai.data.calibre.CalibreBook
 
 private enum class BookSort { SERIES, TITLE, AUTHOR, NEWEST }
 
+private enum class BookFilter { ALL, DOWNLOADED }
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BooksScreen(
@@ -55,6 +59,7 @@ fun BooksScreen(
 ) {
     var query by remember { mutableStateOf("") }
     var sort by remember { mutableStateOf(BookSort.SERIES) }
+    var filter by remember { mutableStateOf(BookFilter.ALL) }
     var selected by remember { mutableStateOf<CalibreBook?>(null) }
     val gridState = rememberLazyGridState()
     val topBarScrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
@@ -86,8 +91,11 @@ fun BooksScreen(
                 }
             }
             is BooksState.Content -> {
-                val shown = remember(state.books, query, sort) {
+                val shown = remember(state.books, state.downloadedIds, query, sort, filter) {
                     state.books
+                        .filter { book ->
+                            filter == BookFilter.ALL || book.id in state.downloadedIds
+                        }
                         .filter {
                             query.isBlank() ||
                                 listOf(it.title, it.authors.joinToString(), it.series.orEmpty())
@@ -136,6 +144,21 @@ fun BooksScreen(
                                 Text(option.name.lowercase().replaceFirstChar(Char::uppercase))
                             }
                         }
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        FilterChip(
+                            selected = filter == BookFilter.ALL,
+                            onClick = { filter = BookFilter.ALL },
+                            label = { Text("All") },
+                        )
+                        FilterChip(
+                            selected = filter == BookFilter.DOWNLOADED,
+                            onClick = { filter = BookFilter.DOWNLOADED },
+                            label = { Text("Downloaded (${state.downloadedIds.size})") },
+                        )
                     }
                     Text(
                         "${shown.size} books",
