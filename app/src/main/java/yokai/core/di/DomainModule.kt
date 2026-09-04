@@ -1,6 +1,7 @@
 package yokai.core.di
 
 import org.koin.dsl.module
+import yokai.data.activity.ReadingActivityRepositoryImpl
 import yokai.data.category.CategoryRepositoryImpl
 import yokai.data.chapter.ChapterRepositoryImpl
 import yokai.data.extension.repo.ExtensionRepoRepositoryImpl
@@ -10,6 +11,7 @@ import yokai.data.komga.annotation.KomgaBookAnnotationRepositoryImpl
 import yokai.data.manga.MangaRepositoryImpl
 import yokai.data.source.browse.filter.SavedSearchRepositoryImpl
 import yokai.data.track.TrackRepositoryImpl
+import yokai.domain.activity.ReadingActivityRepository
 import yokai.domain.category.CategoryRepository
 import yokai.domain.category.interactor.DeleteCategories
 import yokai.domain.category.interactor.GetCategories
@@ -56,6 +58,8 @@ import yokai.domain.track.interactor.GetTrack
 import yokai.domain.track.interactor.InsertTrack
 
 fun domainModule() = module {
+    single<ReadingActivityRepository> { ReadingActivityRepositoryImpl(get()) }
+
     factory { TrustExtension(get(), get()) }
 
     single<CategoryRepository> { CategoryRepositoryImpl(get()) }
