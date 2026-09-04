@@ -1,3 +1,5 @@
+@file:OptIn(org.readium.r2.shared.ExperimentalReadiumApi::class)
+
 package yokai.data.calibre
 
 import android.app.Application
