@@ -26,6 +26,7 @@ import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import uy.kohesive.injekt.injectLazy
 import yokai.data.DatabaseHandler
+import yokai.data.calibre.CalibreReadingSource
 import yokai.domain.activity.ReadingActivityRepository
 import yokai.domain.activity.model.ReadingActivity
 import yokai.domain.chapter.interactor.GetChapter
@@ -152,7 +153,8 @@ class StatsPresenter(
         val sessions = getWeeklyActivity()
         val komga = sessions.count { it.sourceId == KomgaSource.ID }
         val galleries = sessions.count { it.sourceId == GalleryKomganionSource.ID }
-        return "Komga $komga · Galleries $galleries"
+        val books = sessions.count { it.sourceId == CalibreReadingSource.ID }
+        return "Komga $komga · Galleries $galleries · Books $books"
     }
 
     fun getRecentCompletions(): String =
@@ -203,7 +205,8 @@ class StatsPresenter(
             .sortedWith(compareByDescending<Triple<String, Long, Int>> { it.second }.thenByDescending { it.third })
             .take(5)
             .mapIndexed { index, (series, duration, pages) ->
-                "${index + 1}. $series — ${duration.getReadDuration("0m")}, $pages pages"
+                val pageSummary = if (pages > 0) ", $pages pages" else ""
+                "${index + 1}. $series — ${duration.getReadDuration("0m")}$pageSummary"
             }
             .joinToString("\n")
             .ifBlank { "No reading activity yet." }
