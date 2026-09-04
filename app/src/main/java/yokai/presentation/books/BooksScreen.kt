@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -121,6 +122,7 @@ fun BooksScreen(
                     )
                     LazyVerticalGrid(
                         columns = GridCells.Adaptive(112.dp),
+                        modifier = Modifier.weight(1f),
                         contentPadding = PaddingValues(12.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -170,7 +172,7 @@ private fun BookCard(
     onClick: () -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)) {
-        val coverUrl = book.thumbnailUrl ?: book.coverUrl
+        val coverUrl = book.coverUrl ?: book.thumbnailUrl
         val cover by produceState<ByteArray?>(initialValue = null, coverUrl) {
             value = coverUrl?.let { runCatching { coverLoader(it) }.getOrNull() }
         }
