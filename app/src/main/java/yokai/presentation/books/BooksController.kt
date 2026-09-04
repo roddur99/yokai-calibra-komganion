@@ -86,7 +86,15 @@ class BooksController(
         val context = activity ?: return
         val file = epubStore.fileFor(book.id)
         if (!file.isFile) return
-        context.startActivity(CalibreEpubReaderActivity.intent(context, file, book.title, book.id))
+        context.startActivity(
+            CalibreEpubReaderActivity.intent(
+                context = context,
+                file = file,
+                title = book.title,
+                bookId = book.id,
+                seriesTitle = book.series ?: book.title,
+            ),
+        )
     }
 
     private fun deleteDownload(book: CalibreBook) {
