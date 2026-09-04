@@ -26,6 +26,8 @@ import eu.kanade.tachiyomi.data.notification.Notifications
 import eu.kanade.tachiyomi.data.preference.PreferencesHelper
 import eu.kanade.tachiyomi.data.track.TrackService
 import eu.kanade.tachiyomi.domain.manga.models.Manga
+import yokai.domain.activity.ReadingActivityRepository
+import yokai.domain.activity.model.ReadingActivity
 import eu.kanade.tachiyomi.source.LocalSource
 import eu.kanade.tachiyomi.source.Source
 import eu.kanade.tachiyomi.source.SourceManager
@@ -114,8 +116,14 @@ class ReaderViewModel(
     private val insertManga: InsertManga by injectLazy()
     private val updateManga: UpdateManga by injectLazy()
     private val getHistory: GetHistory by injectLazy()
+    private val readingActivityRepository: ReadingActivityRepository by injectLazy()
     private val upsertHistory: UpsertHistory by injectLazy()
     private val getTrack: GetTrack by injectLazy()
+
+    private var activitySessionStartedAt: Long? = null
+    private var activitySessionChapter: ReaderChapter? = null
+    private val activitySessionPages = mutableSetOf<String>()
+    private var activitySessionCompleted = false
 
     private val mutableState = MutableStateFlow(State())
     val state = mutableState.asStateFlow()
@@ -521,6 +529,7 @@ class ReaderViewModel(
         val currentChapters = state.value.viewerChapters ?: return
 
         val selectedChapter = page.chapter
+        trackActivityPage(page)
 
         // Save last page read and mark as read if needed
         viewModelScope.launchNonCancellableIO {
@@ -679,6 +688,10 @@ class ReaderViewModel(
 
     fun restartReadTimer() {
         chapterReadStartTime = Date().time
+        if (activitySessionStartedAt == null) {
+            activitySessionStartedAt = System.currentTimeMillis()
+            activitySessionChapter = getCurrentChapter()
+        }
     }
 
     fun flushReadTimer() {
@@ -687,6 +700,79 @@ class ReaderViewModel(
                 saveChapterHistory(it)
             }
         }
+        finishActivitySession()
+    }
+
+    private fun trackActivityPage(page: ReaderPage) {
+        if (preferences.incognitoMode().get()) return
+
+        val selectedChapter = page.chapter
+        val trackedChapterId = activitySessionChapter?.chapter?.id
+        if (trackedChapterId != null && trackedChapterId != selectedChapter.chapter.id) {
+            finishActivitySession()
+        }
+
+        if (activitySessionStartedAt == null) {
+            activitySessionStartedAt = System.currentTimeMillis()
+        }
+        activitySessionChapter = selectedChapter
+        activitySessionPages += "${selectedChapter.chapter.id ?: selectedChapter.chapter.url}:${page.index}"
+        val lastPageIndex = selectedChapter.pages?.lastIndex
+        if (lastPageIndex != null && page.index >= lastPageIndex) {
+            activitySessionCompleted = true
+        }
+    }
+
+    private fun finishActivitySession() {
+        if (preferences.incognitoMode().get()) {
+            resetActivitySession()
+            return
+        }
+
+        val manga = manga ?: run {
+            resetActivitySession()
+            return
+        }
+        val chapter = activitySessionChapter ?: getCurrentChapter() ?: run {
+            resetActivitySession()
+            return
+        }
+        val startedAt = activitySessionStartedAt ?: run {
+            resetActivitySession()
+            return
+        }
+        val endedAt = System.currentTimeMillis()
+        val pagesViewed = activitySessionPages.size
+        val completed = activitySessionCompleted
+        resetActivitySession()
+
+        if (pagesViewed == 0 || endedAt <= startedAt) return
+
+        viewModelScope.launchNonCancellableIO {
+            readingActivityRepository.insert(
+                ReadingActivity(
+                    id = 0L,
+                    sourceId = manga.source,
+                    mangaId = manga.id,
+                    chapterId = chapter.chapter.id,
+                    itemKey = "${manga.source}:${chapter.chapter.url}",
+                    seriesTitle = manga.title,
+                    itemTitle = chapter.chapter.name,
+                    startedAt = startedAt,
+                    endedAt = endedAt,
+                    durationMs = endedAt - startedAt,
+                    pagesViewed = pagesViewed,
+                    completed = completed,
+                ),
+            )
+        }
+    }
+
+    private fun resetActivitySession() {
+        activitySessionStartedAt = null
+        activitySessionChapter = null
+        activitySessionPages.clear()
+        activitySessionCompleted = false
     }
 
     /**
