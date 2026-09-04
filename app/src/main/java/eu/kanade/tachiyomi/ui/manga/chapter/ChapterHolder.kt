@@ -19,6 +19,7 @@ import eu.kanade.tachiyomi.util.isLocal
 import eu.kanade.tachiyomi.util.system.dpToPx
 import eu.kanade.tachiyomi.util.system.getResourceColor
 import yokai.i18n.MR
+import yokai.source.komga.KomgaSource
 import yokai.util.lang.getString
 import android.R as AR
 
@@ -85,6 +86,24 @@ class ChapterHolder(
             isDetails = true,
         )
         binding.chapterScanlator.text = statuses.joinToString(" • ")
+
+        binding.komgaAnnotation.isVisible = manga.source == KomgaSource.ID
+        if (manga.source == KomgaSource.ID) {
+            val annotation = item.komgaAnnotation
+            binding.komgaAnnotation.text = when {
+                annotation == null -> "Rate & notes"
+                annotation.score != null && annotation.notes.isNotBlank() ->
+                    "${annotation.score}/10 · Notes"
+                annotation.score != null -> "${annotation.score}/10"
+                else -> "Notes"
+            }
+            binding.komgaAnnotation.contentDescription = binding.komgaAnnotation.text
+            binding.komgaAnnotation.setOnClickListener {
+                adapter.delegate.showKomgaAnnotation(item)
+            }
+        } else {
+            binding.komgaAnnotation.setOnClickListener(null)
+        }
 
         val status = when {
             adapter.isSelected(flexibleAdapterPosition) -> Download.State.CHECKED
