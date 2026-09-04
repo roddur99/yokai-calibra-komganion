@@ -15,14 +15,21 @@ import eu.kanade.tachiyomi.source.SourceManager
 import eu.kanade.tachiyomi.source.model.SManga
 import eu.kanade.tachiyomi.ui.base.presenter.BaseCoroutinePresenter
 import eu.kanade.tachiyomi.ui.more.stats.StatsHelper.getReadDuration
+import java.time.DayOfWeek
+import java.time.LocalDate
+import java.time.ZoneId
 import kotlinx.coroutines.runBlocking
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import uy.kohesive.injekt.injectLazy
 import yokai.data.DatabaseHandler
+import yokai.domain.activity.ReadingActivityRepository
+import yokai.domain.activity.model.ReadingActivity
 import yokai.domain.manga.interactor.GetLibraryManga
 import yokai.domain.track.interactor.GetTrack
 import yokai.i18n.MR
+import yokai.source.gallery.GalleryKomganionSource
+import yokai.source.komga.KomgaSource
 import yokai.util.lang.getString
 
 /**
@@ -37,7 +44,10 @@ class StatsPresenter(
     private val handler: DatabaseHandler by injectLazy()
     private val getLibraryManga: GetLibraryManga by injectLazy()
     private val getTrack: GetTrack by injectLazy()
+    private val readingActivityRepository: ReadingActivityRepository by injectLazy()
 
+    private val activitySessions: List<ReadingActivity> =
+        runBlocking { readingActivityRepository.getAll() }
     private val libraryMangas = getLibrary()
     val mangaDistinct = libraryMangas.distinct()
 
@@ -84,6 +94,39 @@ class StatsPresenter(
         val service = trackManager.getService(track.sync_id)
         return service?.get10PointScore(track.score)
     }
+
+    private fun startOfCurrentWeek(): Long =
+        LocalDate.now()
+            .with(DayOfWeek.MONDAY)
+            .atStartOfDay(ZoneId.systemDefault())
+            .toInstant()
+            .toEpochMilli()
+
+    fun getWeeklyActivity(): List<ReadingActivity> =
+        activitySessions.filter { it.startedAt >= startOfCurrentWeek() }
+
+    fun getWeeklyReadDuration(): String =
+        getWeeklyActivity().sumOf { it.durationMs }
+            .getReadDuration(prefs.context.getString(MR.strings.none))
+
+    fun getWeeklyPagesViewed(): Int = getWeeklyActivity().sumOf { it.pagesViewed }
+
+    fun getWeeklyCompleted(): Int = getWeeklyActivity().count { it.completed }
+
+    fun getWeeklySourceUsage(): String {
+        val sessions = getWeeklyActivity()
+        val komga = sessions.count { it.sourceId == KomgaSource.ID }
+        val galleries = sessions.count { it.sourceId == GalleryKomganionSource.ID }
+        return "Komga $komga · Galleries $galleries"
+    }
+
+    fun getRecentCompletions(): String =
+        activitySessions.asSequence()
+            .filter { it.completed }
+            .distinctBy { it.itemKey }
+            .take(5)
+            .joinToString("\n") { "${it.itemTitle} — ${it.seriesTitle}" }
+            .ifBlank { "No completions recorded yet." }
 
     fun getReadDuration(): String {
         val chaptersTime = runBlocking {
