@@ -12,6 +12,12 @@ class CalibreReadingProgressStore(app: Application) {
         preferences.getString(key(bookId), null)
             ?.let { runCatching { Locator.fromJSON(JSONObject(it)) }.getOrNull() }
 
+    fun percentage(bookId: String): Int? =
+        get(bookId)?.locations?.totalProgression
+            ?.coerceIn(0.0, 1.0)
+            ?.times(100)
+            ?.toInt()
+
     fun save(bookId: String, locator: Locator) {
         preferences.edit()
             .putString(key(bookId), locator.toJSON().toString())
