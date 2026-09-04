@@ -60,6 +60,15 @@ class PreferencesHelper(val context: Context, val preferenceStore: PreferenceSto
     fun getStringPref(key: String, default: String = "") = preferenceStore.getString(key, default)
     fun getStringSet(key: String, default: Set<String>) = preferenceStore.getStringSet(key, default)
 
+    fun komgaAnnotationRatingFilter() =
+        preferenceStore.getInt("komga_annotation_rating_filter", 0)
+
+    fun komgaAnnotationHasNotesFilter() =
+        preferenceStore.getBoolean("komga_annotation_has_notes_filter", false)
+
+    fun komgaAnnotationScoreSort() =
+        preferenceStore.getInt("komga_annotation_score_sort", 0)
+
     fun startingTab() = preferenceStore.getInt(Keys.startingTab, 0)
     fun backReturnsToStart() = preferenceStore.getBoolean(Keys.backToStart, true)
 
