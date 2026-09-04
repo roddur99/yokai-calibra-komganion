@@ -7,25 +7,35 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Help
 import androidx.compose.material3.MultiChoiceSegmentedButtonRow
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import co.touchlab.kermit.Logger
 import dev.icerock.moko.resources.StringResource
 import dev.icerock.moko.resources.compose.stringResource
@@ -54,8 +64,12 @@ import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import uy.kohesive.injekt.injectLazy
 import yokai.data.komga.annotation.KomgaAnnotationBackup
+import yokai.data.connection.ConnectionTester
+import yokai.data.connection.CredentialStore
 import yokai.domain.activity.ReadingActivityRepository
 import yokai.domain.backup.BackupPreferences
+import yokai.domain.connection.ConnectionPreferences
+import yokai.domain.connection.ConnectionTestResult
 import yokai.domain.komga.annotation.KomgaBookAnnotationRepository
 import yokai.domain.storage.StorageManager
 import yokai.domain.storage.StoragePreferences
@@ -66,6 +80,7 @@ import yokai.presentation.component.preference.storageLocationText
 import yokai.presentation.component.preference.widget.BasePreferenceWidget
 import yokai.presentation.component.preference.widget.PrefsHorizontalPadding
 import yokai.presentation.settings.ComposableSettings
+import yokai.presentation.theme.Size
 import yokai.presentation.settings.screen.data.StorageInfo
 import yokai.presentation.settings.screen.data.awaitCreateBackup
 import yokai.presentation.settings.screen.data.awaitRestoreBackup
@@ -98,8 +113,111 @@ object SettingsDataScreen : ComposableSettings() {
         return persistentListOf(
             getStorageLocationPreference(storagePreferences = storagePreferences),
             getBackupAndRestoreGroup(backupPreferences = backupPreferences),
+            getCalibreConnectionGroup(),
             getKomgaAnnotationBackupGroup(),
             getDataGroup(),
+        )
+    }
+
+    @Composable
+    private fun getCalibreConnectionGroup(): Preference.PreferenceGroup {
+        val preferences = remember { Injekt.get<ConnectionPreferences>() }
+        val credentialStore = remember { Injekt.get<CredentialStore>() }
+        val connectionTester = remember { Injekt.get<ConnectionTester>() }
+        val scope = rememberCoroutineScope()
+        var baseUrl by remember { mutableStateOf(preferences.calibreBaseUrl().get()) }
+        var username by remember { mutableStateOf(preferences.calibreUsername().get()) }
+        var password by remember { mutableStateOf(credentialStore.calibrePassword.orEmpty()) }
+        var libraryId by remember { mutableStateOf(preferences.calibreLibraryId().get()) }
+        var lightNovelTag by remember { mutableStateOf(preferences.calibreLightNovelTag().get()) }
+        var testing by remember { mutableStateOf(false) }
+        var result by remember { mutableStateOf<ConnectionTestResult?>(null) }
+
+        return Preference.PreferenceGroup(
+            title = "Calibre light novels",
+            preferenceItems = persistentListOf(
+                Preference.PreferenceItem.CustomPreference("Calibre connection") {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = PrefsHorizontalPadding),
+                        verticalArrangement = Arrangement.spacedBy(Size.small),
+                    ) {
+                        Text("Only books carrying the exact configured tag will appear in the Books tab.")
+                        OutlinedTextField(
+                            value = baseUrl,
+                            onValueChange = { baseUrl = it; result = null },
+                            modifier = Modifier.fillMaxWidth(),
+                            label = { Text("Calibre server URL") },
+                            placeholder = { Text("http://100.x.x.x:8080") },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
+                        )
+                        OutlinedTextField(
+                            value = username,
+                            onValueChange = { username = it; result = null },
+                            modifier = Modifier.fillMaxWidth(),
+                            label = { Text("Username") },
+                            singleLine = true,
+                        )
+                        OutlinedTextField(
+                            value = password,
+                            onValueChange = { password = it; result = null },
+                            modifier = Modifier.fillMaxWidth(),
+                            label = { Text("Password") },
+                            singleLine = true,
+                            visualTransformation = PasswordVisualTransformation(),
+                        )
+                        OutlinedTextField(
+                            value = libraryId,
+                            onValueChange = { libraryId = it; result = null },
+                            modifier = Modifier.fillMaxWidth(),
+                            label = { Text("Library ID") },
+                            singleLine = true,
+                        )
+                        OutlinedTextField(
+                            value = lightNovelTag,
+                            onValueChange = { lightNovelTag = it; result = null },
+                            modifier = Modifier.fillMaxWidth(),
+                            label = { Text("Required tag") },
+                            singleLine = true,
+                        )
+                        Button(
+                            onClick = {
+                                testing = true
+                                result = null
+                                scope.launch {
+                                    val tested = connectionTester.testCalibre(baseUrl, username, password)
+                                    if (tested is ConnectionTestResult.Success) {
+                                        preferences.calibreBaseUrl().set(baseUrl.trim().trimEnd('/'))
+                                        preferences.calibreUsername().set(username.trim())
+                                        preferences.calibreLibraryId().set(libraryId.trim())
+                                        preferences.calibreLightNovelTag().set(lightNovelTag.trim())
+                                        credentialStore.calibrePassword = password
+                                    }
+                                    result = tested
+                                    testing = false
+                                }
+                            },
+                            enabled = !testing,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            if (testing) CircularProgressIndicator() else Text("Test and save connection")
+                        }
+                        when (val tested = result) {
+                            ConnectionTestResult.Success -> Text(
+                                "Connection successful",
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                            is ConnectionTestResult.Failure -> Text(
+                                tested.message,
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                            null -> Unit
+                        }
+                    }
+                },
+            ),
         )
     }
 
