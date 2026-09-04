@@ -39,16 +39,25 @@ import org.readium.r2.streamer.parser.DefaultPublicationParser
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import yokai.data.calibre.CalibreReaderPreferencesStore
+import yokai.data.calibre.CalibreReadingSource
 import yokai.data.calibre.CalibreReadingProgressStore
+import yokai.domain.activity.ReadingActivityRepository
+import yokai.domain.activity.model.ReadingActivity
 
 class CalibreEpubReaderActivity : AppCompatActivity() {
 
     private val progressStore: CalibreReadingProgressStore = Injekt.get()
     private val readerPreferencesStore: CalibreReaderPreferencesStore = Injekt.get()
+    private val readingActivityRepository: ReadingActivityRepository = Injekt.get()
     private var readerPreferences = readerPreferencesStore.get()
     private var publication: Publication? = null
     private var navigator: EpubNavigatorFragment? = null
     private val containerId = View.generateViewId()
+    private var activityBookId: String? = null
+    private var activityBookTitle: String = ""
+    private var activitySeriesTitle: String = ""
+    private var sessionStartedAt: Long? = null
+    private var sessionStartProgress: Int = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // The publication-backed FragmentFactory is created asynchronously. Rebuild the
@@ -112,6 +121,9 @@ class CalibreEpubReaderActivity : AppCompatActivity() {
 
         val path = intent.getStringExtra(EXTRA_PATH)
         val bookId = intent.getStringExtra(EXTRA_BOOK_ID)
+        activityBookId = bookId
+        activityBookTitle = title
+        activitySeriesTitle = intent.getStringExtra(EXTRA_SERIES_TITLE).orEmpty().ifBlank { title }
         if (path.isNullOrBlank() || bookId.isNullOrBlank()) {
             fail("Downloaded EPUB information is missing")
             return
@@ -159,6 +171,7 @@ class CalibreEpubReaderActivity : AppCompatActivity() {
         val navigator = supportFragmentManager.findFragmentByTag(NAVIGATOR_TAG)
             as EpubNavigatorFragment
         this.navigator = navigator
+        startReadingSession()
         lifecycleScope.launch {
             navigator.currentLocator
                 .drop(1)
@@ -357,6 +370,61 @@ class CalibreEpubReaderActivity : AppCompatActivity() {
         finish()
     }
 
+    override fun onResume() {
+        super.onResume()
+        if (navigator != null) startReadingSession()
+    }
+
+    override fun onPause() {
+        recordReadingSession()
+        super.onPause()
+    }
+
+    private fun startReadingSession() {
+        if (sessionStartedAt != null || navigator == null) return
+        sessionStartedAt = System.currentTimeMillis()
+        sessionStartProgress = currentProgressPercentage()
+    }
+
+    private fun currentProgressPercentage(): Int =
+        navigator?.currentLocator?.value?.locations?.totalProgression
+            ?.coerceIn(0.0, 1.0)
+            ?.times(100)
+            ?.toInt()
+            ?: activityBookId?.let(progressStore::percentage)
+            ?: 0
+
+    private fun recordReadingSession() {
+        val startedAt = sessionStartedAt ?: return
+        sessionStartedAt = null
+        val bookId = activityBookId ?: return
+        val endedAt = System.currentTimeMillis()
+        val durationMs = (endedAt - startedAt).coerceAtLeast(0)
+        val endProgress = currentProgressPercentage()
+        navigator?.currentLocator?.value?.let { progressStore.save(bookId, it) }
+        if (durationMs < MIN_RECORDED_SESSION_MS) return
+
+        lifecycleScope.launch {
+            readingActivityRepository.insert(
+                ReadingActivity(
+                    id = 0,
+                    sourceId = CalibreReadingSource.ID,
+                    mangaId = null,
+                    chapterId = null,
+                    itemKey = "calibre:$bookId",
+                    seriesTitle = activitySeriesTitle,
+                    itemTitle = activityBookTitle,
+                    startedAt = startedAt,
+                    endedAt = endedAt,
+                    durationMs = durationMs,
+                    pagesViewed = 0,
+                    completed = sessionStartProgress < COMPLETED_PERCENT &&
+                        endProgress >= COMPLETED_PERCENT,
+                ),
+            )
+        }
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         publication?.close()
@@ -369,7 +437,11 @@ class CalibreEpubReaderActivity : AppCompatActivity() {
         private const val EXTRA_PATH = "epub_path"
         private const val EXTRA_TITLE = "book_title"
         private const val EXTRA_BOOK_ID = "book_id"
+        private const val EXTRA_SERIES_TITLE = "series_title"
         private const val NAVIGATOR_TAG = "calibre_epub_navigator"
+
+        private const val MIN_RECORDED_SESSION_MS = 1_000L
+        private const val COMPLETED_PERCENT = 99
 
         private const val ACTION_READER_SETTINGS = 0x7100
         private const val ACTION_TABLE_OF_CONTENTS = 0x7106
@@ -386,10 +458,17 @@ class CalibreEpubReaderActivity : AppCompatActivity() {
             ACTION_SHARE,
         )
 
-        fun intent(context: Context, file: File, title: String, bookId: String): Intent =
+        fun intent(
+            context: Context,
+            file: File,
+            title: String,
+            bookId: String,
+            seriesTitle: String,
+        ): Intent =
             Intent(context, CalibreEpubReaderActivity::class.java)
                 .putExtra(EXTRA_PATH, file.absolutePath)
                 .putExtra(EXTRA_TITLE, title)
                 .putExtra(EXTRA_BOOK_ID, bookId)
+                .putExtra(EXTRA_SERIES_TITLE, seriesTitle)
     }
 }
