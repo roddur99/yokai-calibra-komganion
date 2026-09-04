@@ -19,6 +19,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -30,7 +31,9 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -41,6 +44,9 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import coil3.compose.AsyncImage
 import yokai.data.calibre.CalibreBook
 
@@ -53,6 +59,7 @@ private enum class BookFilter { ALL, DOWNLOADED }
 fun BooksScreen(
     state: BooksState,
     coverLoader: suspend (String) -> ByteArray,
+    progressLoader: (String) -> Int?,
     onRetry: () -> Unit,
     onDownload: (CalibreBook) -> Unit,
     onDeleteDownload: (CalibreBook) -> Unit,
@@ -63,6 +70,15 @@ fun BooksScreen(
     var filter by remember { mutableStateOf(BookFilter.ALL) }
     var selected by remember { mutableStateOf<CalibreBook?>(null) }
     val gridState = rememberLazyGridState()
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var progressRefreshKey by remember { mutableIntStateOf(0) }
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) progressRefreshKey++
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
     val topBarScrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
 
     Scaffold(
@@ -92,6 +108,9 @@ fun BooksScreen(
                 }
             }
             is BooksState.Content -> {
+                val progressById = remember(state.books, progressRefreshKey) {
+                    state.books.associate { it.id to progressLoader(it.id) }
+                }
                 val shown = remember(state.books, state.downloadedIds, query, sort, filter) {
                     state.books
                         .filter { book ->
@@ -178,6 +197,7 @@ fun BooksScreen(
                                 book = book,
                                 coverLoader = coverLoader,
                                 isDownloaded = book.id in state.downloadedIds,
+                                progress = progressById[book.id],
                                 onClick = { selected = book },
                             )
                         }
@@ -191,6 +211,7 @@ fun BooksScreen(
         val content = state as? BooksState.Content
         val isDownloaded = content?.downloadedIds?.contains(book.id) == true
         val isBusy = content?.busyIds?.contains(book.id) == true
+        val progress = progressLoader(book.id)
         AlertDialog(
             onDismissRequest = { selected = null },
             title = { Text(book.title) },
@@ -207,6 +228,9 @@ fun BooksScreen(
                             add(it + index)
                         }
                         if (book.epubUrl != null) add("EPUB available")
+                        progress?.let {
+                            add(if (it >= 99) "Completed" else "$it% read")
+                        }
                     }.joinToString("\n"),
                 )
             },
@@ -246,6 +270,7 @@ private fun BookCard(
     book: CalibreBook,
     coverLoader: suspend (String) -> ByteArray,
     isDownloaded: Boolean,
+    progress: Int?,
     onClick: () -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)) {
@@ -265,6 +290,17 @@ private fun BookCard(
         if (isDownloaded) {
             Text(
                 text = "Downloaded",
+                color = MaterialTheme.colorScheme.primary,
+                style = MaterialTheme.typography.labelSmall,
+            )
+        }
+        progress?.let { percentage ->
+            LinearProgressIndicator(
+                progress = { percentage / 100f },
+                modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
+            )
+            Text(
+                text = if (percentage >= 99) "Completed" else "$percentage% read",
                 color = MaterialTheme.colorScheme.primary,
                 style = MaterialTheme.typography.labelSmall,
             )
