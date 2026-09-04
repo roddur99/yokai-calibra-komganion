@@ -13,6 +13,7 @@ import uy.kohesive.injekt.api.get
 import yokai.data.calibre.CalibreBook
 import yokai.data.calibre.CalibreCatalogClient
 import yokai.data.calibre.CalibreEpubStore
+import yokai.data.calibre.CalibreLibraryStatsStore
 import yokai.data.calibre.CalibreReadingProgressStore
 import yokai.presentation.reader.epub.CalibreEpubReaderActivity
 
@@ -20,6 +21,7 @@ class BooksController(
     private val catalogClient: CalibreCatalogClient = Injekt.get(),
     private val epubStore: CalibreEpubStore = Injekt.get(),
     private val progressStore: CalibreReadingProgressStore = Injekt.get(),
+    private val libraryStatsStore: CalibreLibraryStatsStore = Injekt.get(),
 ) : BaseComposeController(), BottomNavBarInterface {
 
     private var state by mutableStateOf<BooksState>(BooksState.Loading)
@@ -48,6 +50,7 @@ class BooksController(
             state = runCatching { catalogClient.getLightNovels() }
                 .fold(
                     onSuccess = { books ->
+                        libraryStatsStore.updateAvailableCount(books.size)
                         BooksState.Content(
                             books = books,
                             downloadedIds = books.filter { epubStore.isDownloaded(it.id) }
