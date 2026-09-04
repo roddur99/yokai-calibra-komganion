@@ -13,6 +13,7 @@ import uy.kohesive.injekt.api.get
 import yokai.data.calibre.CalibreBook
 import yokai.data.calibre.CalibreCatalogClient
 import yokai.data.calibre.CalibreEpubStore
+import yokai.presentation.reader.epub.CalibreEpubReaderActivity
 
 class BooksController(
     private val catalogClient: CalibreCatalogClient = Injekt.get(),
@@ -34,6 +35,7 @@ class BooksController(
             onRetry = ::refresh,
             onDownload = ::download,
             onDeleteDownload = ::deleteDownload,
+            onOpen = ::open,
         )
     }
 
@@ -75,6 +77,13 @@ class BooksController(
                     }
                 }
         }
+    }
+
+    private fun open(book: CalibreBook) {
+        val context = activity ?: return
+        val file = epubStore.fileFor(book.id)
+        if (!file.isFile) return
+        context.startActivity(CalibreEpubReaderActivity.intent(context, file, book.title))
     }
 
     private fun deleteDownload(book: CalibreBook) {
