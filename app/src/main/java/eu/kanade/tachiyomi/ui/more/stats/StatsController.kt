@@ -72,6 +72,10 @@ class StatsController : BaseLegacyController<StatsControllerBinding>() {
             dashboardCompletionCalendarText.text = presenter.getCompletionCalendar()
             dashboardSeriesAveragesText.text = presenter.getSeriesScoreAverages()
             dashboardMostReadText.text = presenter.getMostReadSeries()
+            dashboardCalibreAvailableText.text = presenter.getCalibreAvailableCount().toString()
+            dashboardCalibreDownloadedText.text = presenter.getCalibreDownloadedCount().toString()
+            dashboardCalibreStartedText.text = presenter.getCalibreStartedCount().toString()
+            dashboardCalibreCompletedText.text = presenter.getCalibreCompletedCount().toString()
         }
     }
 
