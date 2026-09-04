@@ -69,7 +69,7 @@ class CalibreEpubReaderActivity : AppCompatActivity() {
         val assetRetriever = AssetRetriever(contentResolver, httpClient)
         val parser = DefaultPublicationParser(this, httpClient, assetRetriever, null)
         val opener = PublicationOpener(parser)
-        val asset = assetRetriever.retrieve(file.toUrl())
+        val asset = assetRetriever.retrieve(file.toUrl(isDirectory = false))
             .getOrElse {
                 fail("Readium could not read this EPUB")
                 return
