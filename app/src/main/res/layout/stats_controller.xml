@@ -185,6 +185,57 @@
             style="?textAppearanceLabelLarge"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginBottom="@dimen/marginSmall"
+            android:text="Completion calendar · last 28 days"
+            android:textColor="?android:attr/textColorSecondary" />
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/dashboard_completion_calendar_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginBottom="@dimen/marginPage"
+            android:fontFamily="monospace"
+            android:gravity="center"
+            android:lineSpacingExtra="6dp"
+            tools:text="M  T  W  T  F  S  S\n·  ●  ·  ·  ●  ·  ·" />
+
+        <com.google.android.material.textview.MaterialTextView
+            style="?textAppearanceLabelLarge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="@dimen/marginSmall"
+            android:text="Average score by series"
+            android:textColor="?android:attr/textColorSecondary" />
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/dashboard_series_averages_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="@dimen/marginPage"
+            android:lineSpacingExtra="4dp"
+            tools:text="9.5 ★  Example series" />
+
+        <com.google.android.material.textview.MaterialTextView
+            style="?textAppearanceLabelLarge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="@dimen/marginSmall"
+            android:text="Most-read series"
+            android:textColor="?android:attr/textColorSecondary" />
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/dashboard_most_read_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="@dimen/marginPage"
+            android:lineSpacingExtra="4dp"
+            tools:text="1. Example series — 45m, 120 pages" />
+
+        <com.google.android.material.textview.MaterialTextView
+            style="?textAppearanceLabelLarge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
             android:layout_marginBottom="@dimen/marginNormal"
             android:text="@string/general"
             android:textColor="?android:attr/textColorSecondary" />
