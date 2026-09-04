@@ -372,9 +372,7 @@ class MangaDetailsPresenter(
             allChapters
                 .filter { it.chapter.komgaBookId() == bookId }
                 .forEach { it.komgaAnnotation = annotation }
-            chapters
-                .filter { it.chapter.komgaBookId() == bookId }
-                .forEach { it.komgaAnnotation = annotation }
+            getChapters()
 
             withUIContext {
                 view?.updateChapters()
@@ -389,6 +387,42 @@ class MangaDetailsPresenter(
 
     fun sortingOrder() = manga.chapterOrder(preferences)
 
+    fun isKomgaSource() = manga.source == KomgaSource.ID
+
+    fun komgaAnnotationRatingFilter() = preferences.komgaAnnotationRatingFilter().get()
+
+    fun komgaAnnotationHasNotesFilter() = preferences.komgaAnnotationHasNotesFilter().get()
+
+    fun komgaAnnotationScoreSort() = preferences.komgaAnnotationScoreSort().get()
+
+    fun setKomgaAnnotationFilters(ratingFilter: Int, hasNotes: Boolean) {
+        if (!isKomgaSource()) return
+        preferences.komgaAnnotationRatingFilter().set(ratingFilter)
+        preferences.komgaAnnotationHasNotesFilter().set(hasNotes)
+        refreshKomgaAnnotationView()
+    }
+
+    fun setKomgaScoreSort(scoreSort: Int) {
+        if (!isKomgaSource()) return
+        preferences.komgaAnnotationScoreSort().set(scoreSort)
+        refreshKomgaAnnotationView()
+    }
+
+    fun loadRecentlyRated(onLoaded: (List<KomgaBookAnnotation>) -> Unit) {
+        presenterScope.launchIO {
+            val annotations = komgaBookAnnotationRepository.getAll()
+                .filter { it.score != null }
+            withUIContext { onLoaded(annotations) }
+        }
+    }
+
+    private fun refreshKomgaAnnotationView() {
+        presenterScope.launch {
+            getChapters()
+            withUIContext { view?.updateChapters() }
+        }
+    }
+
     /**
      * Applies the view filters to the list of chapters obtained from the database.
      * @param chapterList the list of chapters from the database
@@ -399,7 +433,29 @@ class MangaDetailsPresenter(
             return chapterList
         }
         getScrollType(chapterList)
-        return chapterSort.getChaptersSorted(chapterList)
+        var result = chapterSort.getChaptersSorted(chapterList)
+        if (!isKomgaSource()) return result
+
+        result = when (komgaAnnotationRatingFilter()) {
+            KOMGA_RATING_FILTER_RATED -> result.filter { it.komgaAnnotation?.score != null }
+            KOMGA_RATING_FILTER_UNRATED -> result.filter { it.komgaAnnotation?.score == null }
+            else -> result
+        }
+        if (komgaAnnotationHasNotesFilter()) {
+            result = result.filter { it.komgaAnnotation?.notes?.isNotBlank() == true }
+        }
+
+        return when (komgaAnnotationScoreSort()) {
+            KOMGA_SCORE_SORT_ASCENDING ->
+                result.filter { it.komgaAnnotation?.score != null }
+                    .sortedBy { it.komgaAnnotation?.score } +
+                    result.filter { it.komgaAnnotation?.score == null }
+            KOMGA_SCORE_SORT_DESCENDING ->
+                result.filter { it.komgaAnnotation?.score != null }
+                    .sortedByDescending { it.komgaAnnotation?.score } +
+                    result.filter { it.komgaAnnotation?.score == null }
+            else -> result
+        }
     }
 
     fun getChapterUrl(chapter: Chapter): String? {
@@ -1246,6 +1302,12 @@ class MangaDetailsPresenter(
     }
 
     companion object {
+        const val KOMGA_RATING_FILTER_ALL = 0
+        const val KOMGA_RATING_FILTER_RATED = 1
+        const val KOMGA_RATING_FILTER_UNRATED = 2
+        const val KOMGA_SCORE_SORT_NONE = 0
+        const val KOMGA_SCORE_SORT_ASCENDING = 1
+        const val KOMGA_SCORE_SORT_DESCENDING = 2
         const val MULTIPLE_VOLUMES = 1
         const val TENS_OF_CHAPTERS = 2
         const val MULTIPLE_SEASONS = 3
