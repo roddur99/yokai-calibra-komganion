@@ -34,6 +34,11 @@ This fork currently adds or changes the following:
 - Slideshow playback inside a book.
 - Sequential or shuffled playback.
 - Selectable 2, 3, 5, 10, or 15 second playback interval.
+- Per-book scores from 1–10 and free-text notes.
+  - Scores and notes are stored locally in the app's SQLite database.
+  - Komga book rows display the saved score and whether notes are present.
+  - Annotations can be exported to and restored from a versioned JSON file.
+  - Import merges by Komga book ID; newer records win without erasing unrelated local annotations.
 
 ### Gallery Komganion
 
@@ -74,7 +79,7 @@ Do not expose a development server directly to the public internet. Use authenti
 
 ## Current status
 
-Version **0.1.0** builds successfully as a signed Android release. Komga and Gallery browsing, reading, deletion, metadata, slideshow, shuffle, and playback-speed controls have been tested on Android devices and emulators.
+Version **0.1.1** builds successfully as an Android release. Komga and Gallery browsing, reading, deletion, metadata, slideshow, shuffle, playback-speed controls, local Komga book annotations, and annotation JSON recovery have been tested on Android devices and emulators.
 
 Known follow-up work includes:
 

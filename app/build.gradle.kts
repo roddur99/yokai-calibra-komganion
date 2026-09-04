@@ -28,7 +28,7 @@ fun runCommand(command: String): String {
 }
 
 @Suppress("PropertyName")
-val _versionName = "0.1.0"
+val _versionName = "0.1.1"
 val betaCount by lazy {
     val betaTags = runCommand("git tag -l --sort=refname v${_versionName}-b*")
 
@@ -58,7 +58,7 @@ val keystoreProperties = Properties().apply {
 android {
     defaultConfig {
         applicationId = "com.rodro.yokaikomganion"
-        versionCode = 1
+        versionCode = 2
         versionName = _versionName
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         multiDexEnabled = true

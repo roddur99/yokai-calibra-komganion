@@ -70,7 +70,7 @@
             android:ellipsize="end"
             android:maxLines="2"
             app:layout_constraintBottom_toTopOf="@id/chapter_scanlator"
-            app:layout_constraintEnd_toStartOf="@id/download_button"
+            app:layout_constraintEnd_toStartOf="@id/komga_annotation"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
             tools:text="Chapter 123 - The Real One" />
@@ -85,10 +85,29 @@
             android:ellipsize="end"
             android:maxLines="1"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toStartOf="@id/download_button"
+            app:layout_constraintEnd_toStartOf="@id/komga_annotation"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/chapter_title"
             tools:text="3 days ago • On page 45 • Scanlator" />
+
+        <TextView
+            android:id="@+id/komga_annotation"
+            style="?textAppearanceLabelMedium"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center"
+            android:minHeight="48dp"
+            android:paddingHorizontal="8dp"
+            android:visibility="gone"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/download_button"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:text="8/10 · Notes"
+            tools:visibility="visible" />
 
         <include
             layout="@layout/download_button"
