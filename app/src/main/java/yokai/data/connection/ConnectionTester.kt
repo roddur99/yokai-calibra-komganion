@@ -79,6 +79,56 @@ class ConnectionTester(
         return execute(request, "Gallery Komganion")
     }
 
+    suspend fun testCalibre(
+        baseUrl: String,
+        username: String,
+        password: String,
+    ): ConnectionTestResult {
+        if (username.isBlank() || password.isEmpty()) {
+            return ConnectionTestResult.Failure("Calibre username and password are required")
+        }
+
+        val url = endpoint(baseUrl, "opds") ?: return invalidUrl()
+        val request = Request.Builder()
+            .url(url)
+            .header("Authorization", Credentials.basic(username, password))
+            .header("Accept", OPDS_CONTENT_TYPE)
+            .get()
+            .build()
+
+        return executeCalibre(request)
+    }
+
+    private suspend fun executeCalibre(request: Request): ConnectionTestResult =
+        withContext(Dispatchers.IO) {
+            try {
+                client.newCall(request).execute().use { response ->
+                    if (!response.isSuccessful) {
+                        val authChallenge = response.header("WWW-Authenticate").orEmpty()
+                        if (response.code == 401 && authChallenge.startsWith("Digest", ignoreCase = true)) {
+                            return@use ConnectionTestResult.Failure(
+                                "Calibre is using Digest authentication. Change its Content Server " +
+                                    "authentication mode to Basic for Yokai Komganion.",
+                                statusCode = 401,
+                            )
+                        }
+                        return@use response.toResult("Calibre")
+                    }
+
+                    val body = response.body.string()
+                    if (body.contains("<feed") && body.contains("urn:calibre:main")) {
+                        ConnectionTestResult.Success
+                    } else {
+                        ConnectionTestResult.Failure(
+                            "The server responded, but it was not a Calibre OPDS catalog",
+                        )
+                    }
+                }
+            } catch (error: IOException) {
+                ConnectionTestResult.Failure(error.message ?: "Could not connect to Calibre")
+            }
+        }
+
     private suspend fun execute(
         request: Request,
         serviceName: String,
@@ -124,4 +174,8 @@ class ConnectionTester(
     private fun invalidUrl() = ConnectionTestResult.Failure(
         "Enter a valid http:// or https:// server URL",
     )
+
+    private companion object {
+        const val OPDS_CONTENT_TYPE = "application/atom+xml;profile=opds-catalog"
+    }
 }
