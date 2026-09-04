@@ -86,11 +86,11 @@ class StatsController : BaseLegacyController<StatsControllerBinding>() {
             } else {
                 scoresList.average().roundToTwoDecimal().toString()
             }
-            statsTrackedMangaText.text = mangaTracks.count { it.second.isNotEmpty() }.toString()
+            statsTrackedMangaText.text = presenter.getRatedBookCount().toString()
             statsChaptersDownloadedText.text = mangaDistinct.sumOf { presenter.getDownloadCount(it) }.toString()
             statsTotalTagsText.text = mangaDistinct.flatMap { it.manga.getTags() }.distinct().count().toString()
             statsMangaLocalText.text = presenter.getFocusedGalleryCount().toString()
-            statsGlobalUpdateMangaText.text = presenter.getGlobalUpdateManga().count().toString()
+            statsGlobalUpdateMangaText.text = presenter.getRecordedSessionCount().toString()
             statsSourcesText.text = presenter.getSources().count().toString()
             statsTrackersText.text = presenter.getLoggedTrackers().count().toString()
             statsReadDurationText.text = presenter.getReadDuration()
