@@ -47,9 +47,10 @@ class CalibreCatalogClient(
             val pageUrl = nextUrl
             val xml = getText(pageUrl)
             val page = parseFeed(xml, pageUrl)
-            page.books.asSequence()
-                .filter { book -> book.tags.any { it.equals(requiredTag, ignoreCase = true) } }
-                .forEach { books[it.id] = it }
+            // Calibre applies the exact tag query server-side. Acquisition entries do not
+            // expose tags as Atom categories, so filtering parsed categories here would
+            // incorrectly discard every matching book.
+            page.books.forEach { books[it.id] = it }
             nextUrl = page.nextUrl?.toHttpUrlOrNull()
         }
         books.values.toList()
