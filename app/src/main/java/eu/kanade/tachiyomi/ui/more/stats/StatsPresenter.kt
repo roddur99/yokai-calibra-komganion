@@ -46,8 +46,6 @@ class StatsPresenter(
     private val getTrack: GetTrack by injectLazy()
     private val readingActivityRepository: ReadingActivityRepository by injectLazy()
 
-    private val activitySessions: List<ReadingActivity> =
-        runBlocking { readingActivityRepository.getAll() }
     private val libraryMangas = getLibrary()
     val mangaDistinct = libraryMangas.distinct()
 
@@ -102,8 +100,11 @@ class StatsPresenter(
             .toInstant()
             .toEpochMilli()
 
+    private fun getActivitySessions(): List<ReadingActivity> =
+        runBlocking { readingActivityRepository.getAll() }
+
     fun getWeeklyActivity(): List<ReadingActivity> =
-        activitySessions.filter { it.startedAt >= startOfCurrentWeek() }
+        getActivitySessions().filter { it.startedAt >= startOfCurrentWeek() }
 
     fun getWeeklyReadDuration(): String =
         getWeeklyActivity().sumOf { it.durationMs }
@@ -121,7 +122,7 @@ class StatsPresenter(
     }
 
     fun getRecentCompletions(): String =
-        activitySessions.asSequence()
+        getActivitySessions().asSequence()
             .filter { it.completed }
             .distinctBy { it.itemKey }
             .take(5)
