@@ -30,6 +30,10 @@ class CredentialStore(
         get() = read(GALLERY_API_TOKEN)
         set(value) = write(GALLERY_API_TOKEN, value)
 
+    var calibrePassword: String?
+        get() = read(CALIBRE_PASSWORD)
+        set(value) = write(CALIBRE_PASSWORD, value)
+
     fun clearKomgaCredentials() {
         preferences.edit()
             .remove(KOMGA_API_KEY)
@@ -39,6 +43,10 @@ class CredentialStore(
 
     fun clearGalleryCredentials() {
         preferences.edit().remove(GALLERY_API_TOKEN).apply()
+    }
+
+    fun clearCalibreCredentials() {
+        preferences.edit().remove(CALIBRE_PASSWORD).apply()
     }
 
     private fun write(name: String, value: String?) {
@@ -114,5 +122,6 @@ class CredentialStore(
         const val KOMGA_API_KEY = "komga_api_key"
         const val KOMGA_PASSWORD = "komga_password"
         const val GALLERY_API_TOKEN = "gallery_api_token"
+        const val CALIBRE_PASSWORD = "calibre_password"
     }
 }
