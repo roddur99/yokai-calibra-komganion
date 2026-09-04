@@ -18,6 +18,21 @@ class CalibreReadingProgressStore(app: Application) {
             ?.times(100)
             ?.toInt()
 
+    fun startedCount(): Int = allPercentages().count { it > 0 }
+
+    fun completedCount(): Int = allPercentages().count { it >= 99 }
+
+    private fun allPercentages(): List<Int> =
+        preferences.all.values.mapNotNull { value ->
+            (value as? String)
+                ?.let { runCatching { Locator.fromJSON(JSONObject(it)) }.getOrNull() }
+                ?.locations
+                ?.totalProgression
+                ?.coerceIn(0.0, 1.0)
+                ?.times(100)
+                ?.toInt()
+        }
+
     fun save(bookId: String, locator: Locator) {
         preferences.edit()
             .putString(key(bookId), locator.toJSON().toString())
