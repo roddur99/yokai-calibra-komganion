@@ -3,7 +3,10 @@ package yokai.presentation.reader.epub
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.view.ActionMode
 import android.view.Gravity
+import android.view.Menu
+import android.view.MenuItem
 import android.view.View
 import android.widget.FrameLayout
 import android.widget.LinearLayout
@@ -19,6 +22,7 @@ import eu.kanade.tachiyomi.R
 import java.io.File
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
+import org.readium.r2.navigator.SelectableNavigator
 import org.readium.r2.navigator.epub.EpubNavigatorFactory
 import org.readium.r2.navigator.epub.EpubNavigatorFragment
 import org.readium.r2.shared.publication.Publication
@@ -36,6 +40,7 @@ class CalibreEpubReaderActivity : AppCompatActivity() {
 
     private val progressStore: CalibreReadingProgressStore = Injekt.get()
     private var publication: Publication? = null
+    private var navigator: EpubNavigatorFragment? = null
     private val containerId = View.generateViewId()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -119,17 +124,75 @@ class CalibreEpubReaderActivity : AppCompatActivity() {
         val navigatorFactory = EpubNavigatorFactory(opened)
         supportFragmentManager.fragmentFactory = navigatorFactory.createFragmentFactory(
             initialLocator = progressStore.get(bookId),
+            configuration = EpubNavigatorFragment.Configuration(
+                selectionActionModeCallback = selectionActionModeCallback,
+            ),
         )
         supportFragmentManager.commitNow {
             replace(containerId, EpubNavigatorFragment::class.java, Bundle(), NAVIGATOR_TAG)
         }
         val navigator = supportFragmentManager.findFragmentByTag(NAVIGATOR_TAG)
             as EpubNavigatorFragment
+        this.navigator = navigator
         lifecycleScope.launch {
             navigator.currentLocator
                 .drop(1)
                 .collect { locator -> progressStore.save(bookId, locator) }
         }
+    }
+
+    private val selectionActionModeCallback = object : ActionMode.Callback {
+        override fun onCreateActionMode(mode: ActionMode, menu: Menu): Boolean {
+            menu.add(Menu.NONE, ACTION_DEFINE, 0, "Define").setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM)
+            menu.add(Menu.NONE, ACTION_GOOGLE, 1, "Google").setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM)
+            menu.add(Menu.NONE, ACTION_TRANSLATE, 2, "Translate").setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM)
+            menu.add(Menu.NONE, ACTION_COPY, 3, "Copy")
+            menu.add(Menu.NONE, ACTION_SHARE, 4, "Share")
+            return true
+        }
+
+        override fun onPrepareActionMode(mode: ActionMode, menu: Menu): Boolean = false
+
+        override fun onActionItemClicked(mode: ActionMode, item: MenuItem): Boolean {
+            val action = item.itemId
+            if (action !in LOOKUP_ACTIONS) return false
+            lifecycleScope.launch {
+                val text = (navigator as? SelectableNavigator)
+                    ?.currentSelection()
+                    ?.locator
+                    ?.text
+                    ?.highlight
+                    .orEmpty()
+                if (text.isBlank()) {
+                    Toast.makeText(
+                        this@CalibreEpubReaderActivity,
+                        "No text selected",
+                        Toast.LENGTH_SHORT,
+                    ).show()
+                    return@launch
+                }
+                val launched = when (action) {
+                    ACTION_DEFINE -> TextLookupLauncher.define(this@CalibreEpubReaderActivity, text)
+                    ACTION_GOOGLE -> TextLookupLauncher.google(this@CalibreEpubReaderActivity, text)
+                    ACTION_TRANSLATE -> TextLookupLauncher.translate(this@CalibreEpubReaderActivity, text)
+                    ACTION_COPY -> TextLookupLauncher.copy(this@CalibreEpubReaderActivity, text)
+                    ACTION_SHARE -> TextLookupLauncher.share(this@CalibreEpubReaderActivity, text)
+                    else -> false
+                }
+                if (!launched) {
+                    Toast.makeText(
+                        this@CalibreEpubReaderActivity,
+                        "No compatible app is available",
+                        Toast.LENGTH_SHORT,
+                    ).show()
+                }
+                navigator?.clearSelection()
+            }
+            mode.finish()
+            return true
+        }
+
+        override fun onDestroyActionMode(mode: ActionMode) = Unit
     }
 
     private fun fail(message: String) {
@@ -148,6 +211,19 @@ class CalibreEpubReaderActivity : AppCompatActivity() {
         private const val EXTRA_TITLE = "book_title"
         private const val EXTRA_BOOK_ID = "book_id"
         private const val NAVIGATOR_TAG = "calibre_epub_navigator"
+
+        private const val ACTION_DEFINE = 0x7101
+        private const val ACTION_GOOGLE = 0x7102
+        private const val ACTION_TRANSLATE = 0x7103
+        private const val ACTION_COPY = 0x7104
+        private const val ACTION_SHARE = 0x7105
+        private val LOOKUP_ACTIONS = setOf(
+            ACTION_DEFINE,
+            ACTION_GOOGLE,
+            ACTION_TRANSLATE,
+            ACTION_COPY,
+            ACTION_SHARE,
+        )
 
         fun intent(context: Context, file: File, title: String, bookId: String): Intent =
             Intent(context, CalibreEpubReaderActivity::class.java)
