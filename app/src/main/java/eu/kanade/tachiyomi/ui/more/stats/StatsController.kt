@@ -43,13 +43,15 @@ class StatsController : BaseLegacyController<StatsControllerBinding>() {
     /**
      * Returns the toolbar title to show when this controller is attached.
      */
-    override fun getTitle() = activity?.getString(MR.strings.statistics)
+    override fun getTitle() = "Dashboard"
 
     override fun createBinding(inflater: LayoutInflater) = StatsControllerBinding.inflate(inflater)
 
     override fun onViewCreated(view: View) {
         super.onViewCreated(view)
         scrollViewWith(binding.statsScrollView, true)
+        handleActivityDashboard()
+        handleReadingTimeHistory()
         handleGeneralStats()
         if (mangaDistinct.isNotEmpty()) {
             binding.viewDetailLayout.setOnClickListener {
@@ -60,25 +62,83 @@ class StatsController : BaseLegacyController<StatsControllerBinding>() {
         if (scoresList.isNotEmpty()) handleScoreDistribution()
     }
 
+    private fun handleActivityDashboard() {
+        with(binding) {
+            dashboardTimeText.text = presenter.getWeeklyReadDuration()
+            dashboardPagesText.text = presenter.getWeeklyPagesViewed().toString()
+            dashboardCompletedText.text = presenter.getWeeklyCompleted().toString()
+            dashboardSourceUsageText.text = presenter.getWeeklySourceUsage()
+            dashboardRecentCompletionsText.text = presenter.getRecentCompletions()
+            dashboardCompletionCalendarText.text = presenter.getCompletionCalendar()
+            dashboardSeriesAveragesText.text = presenter.getSeriesScoreAverages()
+            dashboardMostReadText.text = presenter.getMostReadSeries()
+        }
+    }
+
+    private fun handleReadingTimeHistory() {
+        binding.dashboardPeriodGroup.addOnButtonCheckedListener { _, checkedId, isChecked ->
+            if (!isChecked) return@addOnButtonCheckedListener
+            val buckets = when (checkedId) {
+                R.id.dashboard_period_daily -> presenter.getDailyReadingTime()
+                R.id.dashboard_period_weekly -> presenter.getWeeklyReadingTime()
+                else -> presenter.getMonthlyReadingTime()
+            }
+            showReadingTimeHistory(buckets)
+        }
+        binding.dashboardPeriodMonthly.isChecked = true
+    }
+
+    private fun showReadingTimeHistory(buckets: List<StatsPresenter.ReadingTimeBucket>) {
+        val entries = buckets.mapIndexed { index, bucket ->
+            BarEntry(index.toFloat(), bucket.durationMs / 60_000f)
+        }
+        val dataSet = BarDataSet(entries, "Reading time").apply {
+            color = activity!!.getResourceColor(R.attr.colorSecondary)
+            setDrawValues(false)
+        }
+
+        with(binding.dashboardMonthlyChart) {
+            axisLeft.axisMinimum = 0f
+            axisLeft.textColor = activity!!.getResourceColor(R.attr.colorOnBackground)
+            axisRight.isEnabled = false
+            xAxis.apply {
+                position = XAxis.XAxisPosition.BOTTOM
+                setDrawGridLines(false)
+                granularity = 1f
+                textColor = activity!!.getResourceColor(R.attr.colorOnBackground)
+                valueFormatter = object : ValueFormatter() {
+                    override fun getFormattedValue(value: Float): String =
+                        buckets.getOrNull(value.roundToInt())?.label.orEmpty()
+                }
+            }
+            description.isEnabled = false
+            legend.isEnabled = false
+            setTouchEnabled(false)
+            data = BarData(dataSet).apply { barWidth = 0.55f }
+            invalidate()
+        }
+    }
+
     private fun handleGeneralStats() {
         val mangaTracks = mangaDistinct.map { it to presenter.getTracks(it.manga) }
-        scoresList = getScoresList(mangaTracks)
+        val annotationScores = presenter.getAnnotationScores()
+        scoresList = annotationScores.ifEmpty { getScoresList(mangaTracks) }
         with(binding) {
             viewDetailLayout.isVisible = mangaDistinct.isNotEmpty()
-            statsTotalMangaText.text = mangaDistinct.count().toString()
-            statsTotalChaptersText.text = mangaDistinct.sumOf { it.totalChapters }.toString()
-            statsChaptersReadText.text = mangaDistinct.sumOf { it.read }.toString()
+            statsTotalMangaText.text = presenter.getFocusedTitleCount().toString()
+            statsTotalChaptersText.text = presenter.getFocusedChapterCount().toString()
+            statsChaptersReadText.text = presenter.getFocusedReadChapterCount().toString()
             statsMangaMeanScoreText.text = if (scoresList.isEmpty()) {
                 statsMangaMeanScoreText.setCompoundDrawablesWithIntrinsicBounds(0, 0, 0, 0)
                 activity?.getString(MR.strings.none)
             } else {
                 scoresList.average().roundToTwoDecimal().toString()
             }
-            statsTrackedMangaText.text = mangaTracks.count { it.second.isNotEmpty() }.toString()
+            statsTrackedMangaText.text = presenter.getRatedBookCount().toString()
             statsChaptersDownloadedText.text = mangaDistinct.sumOf { presenter.getDownloadCount(it) }.toString()
             statsTotalTagsText.text = mangaDistinct.flatMap { it.manga.getTags() }.distinct().count().toString()
-            statsMangaLocalText.text = mangaDistinct.count { it.manga.isLocal() }.toString()
-            statsGlobalUpdateMangaText.text = presenter.getGlobalUpdateManga().count().toString()
+            statsMangaLocalText.text = presenter.getFocusedGalleryCount().toString()
+            statsGlobalUpdateMangaText.text = presenter.getRecordedSessionCount().toString()
             statsSourcesText.text = presenter.getSources().count().toString()
             statsTrackersText.text = presenter.getLoggedTrackers().count().toString()
             statsReadDurationText.text = presenter.getReadDuration()

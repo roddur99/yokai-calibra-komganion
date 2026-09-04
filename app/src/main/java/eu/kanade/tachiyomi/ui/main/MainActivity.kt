@@ -500,6 +500,7 @@ open class MainActivity : BaseActivity<MainActivityBinding>() {
                 when (router.backstack.firstOrNull()?.controller) {
                     is RecentsController -> R.id.nav_recents
                     is KomgaBrowseController -> R.id.nav_library
+                    is StatsController -> R.id.nav_dashboard
                     is GalleryBrowseController -> R.id.nav_browse
                     is BrowseController -> R.id.nav_browse
                     else -> R.id.nav_library
@@ -525,6 +526,7 @@ open class MainActivity : BaseActivity<MainActivityBinding>() {
                     when (id) {
                         R.id.nav_library -> KomgaBrowseController()
                         R.id.nav_recents -> RecentsController()
+                        R.id.nav_dashboard -> StatsController()
                         else -> BrowseController()
                     },
                     id,

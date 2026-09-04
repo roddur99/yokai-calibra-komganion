@@ -1,0 +1,64 @@
+import kotlin.Boolean;
+
+CREATE TABLE reading_activity (
+    activity_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    source_id INTEGER NOT NULL,
+    manga_id INTEGER,
+    chapter_id INTEGER,
+    item_key TEXT NOT NULL,
+    series_title TEXT NOT NULL,
+    item_title TEXT NOT NULL,
+    started_at INTEGER NOT NULL,
+    ended_at INTEGER NOT NULL,
+    duration_ms INTEGER NOT NULL DEFAULT 0,
+    pages_viewed INTEGER NOT NULL DEFAULT 0,
+    completed INTEGER AS Boolean NOT NULL DEFAULT 0
+);
+
+CREATE INDEX reading_activity_started_at_index
+ON reading_activity(started_at);
+
+CREATE INDEX reading_activity_source_id_index
+ON reading_activity(source_id);
+
+findAll:
+SELECT *
+FROM reading_activity
+ORDER BY started_at DESC;
+
+findSince:
+SELECT *
+FROM reading_activity
+WHERE started_at >= :startDate
+ORDER BY started_at DESC;
+
+insert:
+INSERT INTO reading_activity (
+    source_id,
+    manga_id,
+    chapter_id,
+    item_key,
+    series_title,
+    item_title,
+    started_at,
+    ended_at,
+    duration_ms,
+    pages_viewed,
+    completed
+)
+VALUES (
+    :sourceId,
+    :mangaId,
+    :chapterId,
+    :itemKey,
+    :seriesTitle,
+    :itemTitle,
+    :startedAt,
+    :endedAt,
+    :durationMs,
+    :pagesViewed,
+    :completed
+);
+
+deleteAll:
+DELETE FROM reading_activity;

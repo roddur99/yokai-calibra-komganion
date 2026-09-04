@@ -32,6 +32,211 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginBottom="@dimen/marginNormal"
+            android:text="This week"
+            android:textColor="?android:attr/textColorSecondary" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="20dp"
+            android:baselineAligned="false">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:orientation="vertical">
+
+                <com.google.android.material.textview.MaterialTextView
+                    android:id="@+id/dashboard_time_text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="?attr/colorSecondary"
+                    tools:text="25m" />
+
+                <com.google.android.material.textview.MaterialTextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:text="Reading time" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:orientation="vertical">
+
+                <com.google.android.material.textview.MaterialTextView
+                    android:id="@+id/dashboard_pages_text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="?attr/colorSecondary"
+                    tools:text="42" />
+
+                <com.google.android.material.textview.MaterialTextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:text="Pages viewed" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:orientation="vertical">
+
+                <com.google.android.material.textview.MaterialTextView
+                    android:id="@+id/dashboard_completed_text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="?attr/colorSecondary"
+                    tools:text="2" />
+
+                <com.google.android.material.textview.MaterialTextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:text="Completed" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <com.google.android.material.textview.MaterialTextView
+            style="?textAppearanceLabelLarge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="@dimen/marginSmall"
+            android:text="Source usage"
+            android:textColor="?android:attr/textColorSecondary" />
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/dashboard_source_usage_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="@dimen/marginNormal"
+            tools:text="Komga 3 · Galleries 2" />
+
+        <com.google.android.material.textview.MaterialTextView
+            style="?textAppearanceLabelLarge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="@dimen/marginSmall"
+            android:text="Recent completions"
+            android:textColor="?android:attr/textColorSecondary" />
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/dashboard_recent_completions_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="@dimen/marginPage"
+            android:lineSpacingExtra="4dp"
+            tools:text="Book 1 — Series A" />
+
+        <com.google.android.material.textview.MaterialTextView
+            style="?textAppearanceLabelLarge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="@dimen/marginSmall"
+            android:text="Reading time history"
+            android:textColor="?android:attr/textColorSecondary" />
+
+        <com.google.android.material.button.MaterialButtonToggleGroup
+            android:id="@+id/dashboard_period_group"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginBottom="@dimen/marginSmall"
+            app:selectionRequired="true"
+            app:singleSelection="true">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/dashboard_period_daily"
+                style="@style/Widget.Tachiyomi.Button.OutlinedButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Daily" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/dashboard_period_weekly"
+                style="@style/Widget.Tachiyomi.Button.OutlinedButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Weekly" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/dashboard_period_monthly"
+                style="@style/Widget.Tachiyomi.Button.OutlinedButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Monthly" />
+        </com.google.android.material.button.MaterialButtonToggleGroup>
+
+        <com.github.mikephil.charting.charts.BarChart
+            android:id="@+id/dashboard_monthly_chart"
+            android:layout_width="match_parent"
+            android:layout_height="220dp"
+            android:layout_marginBottom="@dimen/marginPage" />
+
+        <com.google.android.material.textview.MaterialTextView
+            style="?textAppearanceLabelLarge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="@dimen/marginSmall"
+            android:text="Completion calendar · last 28 days"
+            android:textColor="?android:attr/textColorSecondary" />
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/dashboard_completion_calendar_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginBottom="@dimen/marginPage"
+            android:fontFamily="monospace"
+            android:gravity="center"
+            android:lineSpacingExtra="6dp"
+            tools:text="M  T  W  T  F  S  S\n·  ●  ·  ·  ●  ·  ·" />
+
+        <com.google.android.material.textview.MaterialTextView
+            style="?textAppearanceLabelLarge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="@dimen/marginSmall"
+            android:text="Average score by series"
+            android:textColor="?android:attr/textColorSecondary" />
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/dashboard_series_averages_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="@dimen/marginPage"
+            android:lineSpacingExtra="4dp"
+            tools:text="9.5 ★  Example series" />
+
+        <com.google.android.material.textview.MaterialTextView
+            style="?textAppearanceLabelLarge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="@dimen/marginSmall"
+            android:text="Most-read series"
+            android:textColor="?android:attr/textColorSecondary" />
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/dashboard_most_read_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="@dimen/marginPage"
+            android:lineSpacingExtra="4dp"
+            tools:text="1. Example series — 45m, 120 pages" />
+
+        <com.google.android.material.textview.MaterialTextView
+            style="?textAppearanceLabelLarge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="@dimen/marginNormal"
             android:text="@string/general"
             android:textColor="?android:attr/textColorSecondary" />
 
@@ -64,7 +269,7 @@
                     android:layout_gravity="bottom|center_horizontal"
                     android:layout_marginTop="@dimen/marginClose"
                     android:gravity="center"
-                    android:text="@string/titles_in_library" />
+                    android:text="Indexed titles" />
 
             </LinearLayout>
 
@@ -91,7 +296,7 @@
                     android:layout_gravity="bottom|center_horizontal"
                     android:layout_marginTop="@dimen/marginClose"
                     android:gravity="center"
-                    android:text="@string/total_chapters" />
+                    android:text="Indexed books" />
 
             </LinearLayout>
 
@@ -118,7 +323,7 @@
                     android:layout_gravity="bottom|center_horizontal"
                     android:layout_marginTop="@dimen/marginClose"
                     android:gravity="center"
-                    android:text="@string/chapters_read" />
+                    android:text="Read books" />
 
             </LinearLayout>
 
@@ -149,7 +354,7 @@
                     android:layout_gravity="bottom|center_horizontal"
                     android:layout_marginTop="@dimen/marginClose"
                     android:gravity="center"
-                    android:text="@string/mean_tracking_score" />
+                    android:text="Mean score" />
 
             </LinearLayout>
 
@@ -184,7 +389,7 @@
                     android:layout_gravity="bottom|center_horizontal"
                     android:layout_marginTop="@dimen/marginClose"
                     android:gravity="center"
-                    android:text="@string/tracked_titles" />
+                    android:text="Rated books" />
 
             </LinearLayout>
 
@@ -211,7 +416,7 @@
                     android:layout_gravity="bottom|center_horizontal"
                     android:layout_marginTop="@dimen/marginClose"
                     android:gravity="center"
-                    android:text="@string/titles_in_global_update" />
+                    android:text="Recorded sessions" />
 
             </LinearLayout>
 
@@ -300,7 +505,7 @@
                     android:layout_gravity="bottom|center_horizontal"
                     android:layout_marginTop="@dimen/marginClose"
                     android:gravity="center"
-                    android:text="@string/local_titles" />
+                    android:text="Gallery titles" />
 
             </LinearLayout>
 
