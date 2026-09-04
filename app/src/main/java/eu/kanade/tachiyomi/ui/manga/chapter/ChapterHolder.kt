@@ -54,7 +54,7 @@ class ChapterHolder(
         if (komgaSource != null && bookId != null) {
             coverRequest = binding.komgaBookCover.loadManga(
                 MangaCover(
-                    mangaId = null,
+                    mangaId = chapter.id,
                     sourceId = KomgaSource.ID,
                     url = komgaSource.getBookThumbnailUrl(bookId),
                     lastModified = 0L,
