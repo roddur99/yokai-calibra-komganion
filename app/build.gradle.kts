@@ -252,7 +252,6 @@ dependencies {
     implementation(libs.slice)
     implementation(libs.markwon)
 
-    implementation(libs.photoview)
     implementation(libs.directionalviewpager)
     implementation(libs.viewtooltip)
     implementation(libs.taptargetview)
