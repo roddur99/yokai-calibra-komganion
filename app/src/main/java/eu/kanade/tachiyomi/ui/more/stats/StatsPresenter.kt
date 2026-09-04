@@ -82,7 +82,7 @@ class StatsPresenter(
 
     fun getRatedBookCount(): Int = getAnnotationScores().size
 
-    fun getRecordedSessionCount(): Int = activitySessions.size
+    fun getRecordedSessionCount(): Int = getActivitySessions().size
 
     fun getTracks(manga: Manga): MutableList<Track> {
         return runBlocking { getTrack.awaitAllByMangaId(manga.id) }.toMutableList()
