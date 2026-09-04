@@ -12,6 +12,7 @@ import eu.kanade.tachiyomi.data.database.models.hideChapterTitle
 import eu.kanade.tachiyomi.databinding.ChapterSortBottomSheetBinding
 import eu.kanade.tachiyomi.domain.manga.models.Manga
 import eu.kanade.tachiyomi.ui.manga.MangaDetailsController
+import eu.kanade.tachiyomi.ui.manga.MangaDetailsPresenter
 import eu.kanade.tachiyomi.util.chapter.ChapterUtil
 import eu.kanade.tachiyomi.util.system.dpToPx
 import eu.kanade.tachiyomi.util.system.materialAlertDialog
@@ -89,6 +90,21 @@ class ChaptersSortBottomSheet(controller: MangaDetailsController) :
         binding.byChapterNumber.state = SortTextView.State.NONE
         binding.byUploadDate.state = SortTextView.State.NONE
         binding.bySource.state = SortTextView.State.NONE
+        binding.byScore.isVisible = presenter.isKomgaSource()
+        binding.komgaAnnotationFilters.isVisible = presenter.isKomgaSource()
+        binding.byScore.state = when (presenter.komgaAnnotationScoreSort()) {
+            MangaDetailsPresenter.KOMGA_SCORE_SORT_ASCENDING -> SortTextView.State.ASCENDING
+            MangaDetailsPresenter.KOMGA_SCORE_SORT_DESCENDING -> SortTextView.State.DESCENDING
+            else -> SortTextView.State.NONE
+        }
+        binding.ratingFilter.check(
+            when (presenter.komgaAnnotationRatingFilter()) {
+                MangaDetailsPresenter.KOMGA_RATING_FILTER_RATED -> binding.filterRated.id
+                MangaDetailsPresenter.KOMGA_RATING_FILTER_UNRATED -> binding.filterUnrated.id
+                else -> binding.filterAllRatings.id
+            },
+        )
+        binding.filterHasNotes.isChecked = presenter.komgaAnnotationHasNotesFilter()
 
         val sortItem = when (presenter.sortingOrder()) {
             Manga.CHAPTER_SORTING_NUMBER -> binding.byChapterNumber
@@ -106,6 +122,37 @@ class ChaptersSortBottomSheet(controller: MangaDetailsController) :
         binding.byChapterNumber.setOnSortChangeListener(::sortChanged)
         binding.byUploadDate.setOnSortChangeListener(::sortChanged)
         binding.bySource.setOnSortChangeListener(::sortChanged)
+        binding.byScore.setOnSortChangeListener(::scoreSortChanged)
+        binding.ratingFilter.setOnCheckedChangeListener { _, checkedId ->
+            val ratingFilter = when (checkedId) {
+                binding.filterRated.id -> MangaDetailsPresenter.KOMGA_RATING_FILTER_RATED
+                binding.filterUnrated.id -> MangaDetailsPresenter.KOMGA_RATING_FILTER_UNRATED
+                else -> MangaDetailsPresenter.KOMGA_RATING_FILTER_ALL
+            }
+            presenter.setKomgaAnnotationFilters(ratingFilter, binding.filterHasNotes.isChecked)
+        }
+        binding.filterHasNotes.setOnCheckedChangeListener { _, checked ->
+            presenter.setKomgaAnnotationFilters(presenter.komgaAnnotationRatingFilter(), checked)
+        }
+        binding.recentlyRated.setOnClickListener {
+            presenter.loadRecentlyRated { annotations ->
+                val labels = annotations.map {
+                    "${it.score}/10 · ${it.bookTitle}\n${it.seriesTitle}" +
+                        if (it.notes.isNotBlank()) " · Notes" else ""
+                }.toTypedArray()
+                activity.materialAlertDialog()
+                    .setTitle("Recently rated")
+                    .apply {
+                        if (labels.isEmpty()) {
+                            setMessage("No rated Komga books yet.")
+                        } else {
+                            setItems(labels, null)
+                        }
+                    }
+                    .setPositiveButton(AR.string.ok, null)
+                    .show()
+            }
+        }
 
         binding.hideTitles.isChecked = presenter.manga.hideChapterTitle(presenter.preferences)
 
@@ -225,7 +272,22 @@ class ChaptersSortBottomSheet(controller: MangaDetailsController) :
         binding.resetAsDefaultSort.isInvisible = matches
     }
 
+    private fun scoreSortChanged(sortTextView: SortTextView, state: SortTextView.State) {
+        binding.byChapterNumber.state = SortTextView.State.NONE
+        binding.byUploadDate.state = SortTextView.State.NONE
+        binding.bySource.state = SortTextView.State.NONE
+        presenter.setKomgaScoreSort(
+            when (state) {
+                SortTextView.State.ASCENDING -> MangaDetailsPresenter.KOMGA_SCORE_SORT_ASCENDING
+                SortTextView.State.DESCENDING -> MangaDetailsPresenter.KOMGA_SCORE_SORT_DESCENDING
+                else -> MangaDetailsPresenter.KOMGA_SCORE_SORT_NONE
+            },
+        )
+    }
+
     private fun sortChanged(sortTextView: SortTextView, state: SortTextView.State) {
+        binding.byScore.state = SortTextView.State.NONE
+        presenter.setKomgaScoreSort(MangaDetailsPresenter.KOMGA_SCORE_SORT_NONE)
         if (sortTextView != binding.byChapterNumber) {
             binding.byChapterNumber.state = SortTextView.State.NONE
         }
