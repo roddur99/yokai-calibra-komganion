@@ -20,6 +20,7 @@ import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import kotlin.math.roundToInt
 import kotlinx.coroutines.runBlocking
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
@@ -161,6 +162,53 @@ class StatsPresenter(
             .take(5)
             .joinToString("\n") { "${it.itemTitle} — ${it.seriesTitle}" }
             .ifBlank { "No completions recorded yet." }
+
+    fun getCompletionCalendar(): String {
+        val zone = ZoneId.systemDefault()
+        val currentWeekStart = LocalDate.now(zone).with(DayOfWeek.MONDAY)
+        val completedDays = getActivitySessions().asSequence()
+            .filter { it.completed }
+            .map { java.time.Instant.ofEpochMilli(it.startedAt).atZone(zone).toLocalDate() }
+            .toSet()
+        val firstDay = currentWeekStart.minusWeeks(3)
+        val days = (0..27).map { firstDay.plusDays(it.toLong()) }
+
+        return buildString {
+            append("M  T  W  T  F  S  S\n")
+            days.chunked(7).forEachIndexed { row, week ->
+                append(week.joinToString("  ") { if (it in completedDays) "●" else "·" })
+                if (row < 3) append('\n')
+            }
+        }
+    }
+
+    fun getSeriesScoreAverages(): String = runBlocking {
+        komgaBookAnnotationRepository.getAll().asSequence()
+            .filter { it.score != null }
+            .groupBy { it.seriesTitle.ifBlank { "Unknown series" } }
+            .map { (series, annotations) -> series to annotations.mapNotNull { it.score }.average() }
+            .sortedByDescending { it.second }
+            .take(5)
+            .joinToString("\n") { (series, average) ->
+                "${average.roundToOneDecimal()} ★  $series"
+            }
+            .ifBlank { "No rated series yet." }
+    }
+
+    fun getMostReadSeries(): String =
+        getActivitySessions().groupBy { it.seriesTitle.ifBlank { "Unknown series" } }
+            .map { (series, sessions) ->
+                Triple(series, sessions.sumOf { it.durationMs }, sessions.sumOf { it.pagesViewed })
+            }
+            .sortedWith(compareByDescending<Triple<String, Long, Int>> { it.second }.thenByDescending { it.third })
+            .take(5)
+            .mapIndexed { index, (series, duration, pages) ->
+                "${index + 1}. $series — ${duration.getReadDuration("0m")}, $pages pages"
+            }
+            .joinToString("\n")
+            .ifBlank { "No reading activity yet." }
+
+    private fun Double.roundToOneDecimal(): String = ((this * 10).roundToInt() / 10.0).toString()
 
     data class ReadingTimeBucket(
         val label: String,
