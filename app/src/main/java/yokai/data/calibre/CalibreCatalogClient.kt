@@ -155,7 +155,10 @@ class CalibreCatalogClient(
         password: String,
     ): String? {
         val values = DIGEST_PARAMETER.findAll(challenge.substringAfter(' '))
-            .associate { it.groupValues[1].lowercase() to it.groupValues[2].ifEmpty { _ -> it.groupValues[3] } }
+            .associate { match ->
+                match.groupValues[1].lowercase() to
+                    match.groupValues[2].ifEmpty { match.groupValues[3] }
+            }
         val realm = values["realm"] ?: return null
         val nonce = values["nonce"] ?: return null
         val opaque = values["opaque"]
