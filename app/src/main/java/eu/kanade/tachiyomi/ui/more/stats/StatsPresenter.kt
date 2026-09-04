@@ -80,6 +80,10 @@ class StatsPresenter(
             .mapNotNull { it.score?.toDouble() }
     }
 
+    fun getRatedBookCount(): Int = getAnnotationScores().size
+
+    fun getRecordedSessionCount(): Int = activitySessions.size
+
     fun getTracks(manga: Manga): MutableList<Track> {
         return runBlocking { getTrack.awaitAllByMangaId(manga.id) }.toMutableList()
     }
