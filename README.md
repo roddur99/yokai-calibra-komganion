@@ -79,7 +79,7 @@ Do not expose a development server directly to the public internet. Use authenti
 
 ## Current status
 
-Version **0.1.0** builds successfully as a signed Android release. Komga and Gallery browsing, reading, deletion, metadata, slideshow, shuffle, playback-speed controls, local Komga book annotations, and annotation JSON recovery have been tested on Android devices and emulators.
+Version **0.1.1** builds successfully as an Android release. Komga and Gallery browsing, reading, deletion, metadata, slideshow, shuffle, playback-speed controls, local Komga book annotations, and annotation JSON recovery have been tested on Android devices and emulators.
 
 Known follow-up work includes:
 
