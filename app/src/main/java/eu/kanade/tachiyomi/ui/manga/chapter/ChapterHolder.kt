@@ -8,6 +8,7 @@ import androidx.core.animation.doOnEnd
 import androidx.core.animation.doOnStart
 import androidx.core.view.isVisible
 import androidx.core.widget.TextViewCompat
+import coil3.request.Disposable
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.data.download.model.Download
 import eu.kanade.tachiyomi.databinding.ChaptersItemBinding
@@ -18,8 +19,10 @@ import eu.kanade.tachiyomi.util.chapter.ChapterUtil.Companion.preferredChapterNa
 import eu.kanade.tachiyomi.util.isLocal
 import eu.kanade.tachiyomi.util.system.dpToPx
 import eu.kanade.tachiyomi.util.system.getResourceColor
+import yokai.domain.manga.models.MangaCover
 import yokai.i18n.MR
 import yokai.source.komga.KomgaSource
+import yokai.util.coil.loadManga
 import yokai.util.lang.getString
 import android.R as AR
 
@@ -30,6 +33,7 @@ class ChapterHolder(
 
     private val binding = ChaptersItemBinding.bind(view)
     private var localSource = false
+    private var coverRequest: Disposable? = null
 
     init {
         binding.downloadButton.downloadButton.setOnLongClickListener {
@@ -41,6 +45,25 @@ class ChapterHolder(
     fun bind(item: ChapterItem, manga: Manga) {
         val chapter = item.chapter
         val isLocked = item.isLocked
+        val komgaSource = adapter.presenter.source as? KomgaSource
+        val bookId = chapter.url.substringAfterLast('/').takeIf { it.isNotBlank() }
+
+        coverRequest?.dispose()
+        coverRequest = null
+        binding.komgaBookCover.isVisible = komgaSource != null && bookId != null
+        if (komgaSource != null && bookId != null) {
+            coverRequest = binding.komgaBookCover.loadManga(
+                MangaCover(
+                    mangaId = null,
+                    sourceId = KomgaSource.ID,
+                    url = komgaSource.getBookThumbnailUrl(bookId),
+                    lastModified = 0L,
+                    inLibrary = false,
+                ),
+            )
+        } else {
+            binding.komgaBookCover.setImageDrawable(null)
+        }
         itemView.transitionName = "details chapter ${chapter.id ?: 0L} transition"
         binding.chapterTitle.text =
             chapter.preferredChapterName(itemView.context, manga, adapter.preferences)
@@ -115,6 +138,12 @@ class ChapterHolder(
         if (flexibleAdapterPosition == 1) {
             if (!adapter.hasShownSwipeTut.get()) showSlideAnimation()
         }
+    }
+
+    fun unbind() {
+        coverRequest?.dispose()
+        coverRequest = null
+        binding.komgaBookCover.setImageDrawable(null)
     }
 
     private fun showSlideAnimation() {
