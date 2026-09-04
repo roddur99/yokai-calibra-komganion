@@ -19,7 +19,7 @@ class KomgaAnnotationBackup(
         return json.encodeToString(backup)
     }
 
-    suspend fun import(content: String): ImportResult {
+    suspend fun restore(content: String): ImportResult {
         val backup = json.decodeFromString<BackupFile>(content)
         require(backup.version == CURRENT_VERSION) {
             "Unsupported Komga annotation backup version: ${backup.version}"
