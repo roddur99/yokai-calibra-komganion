@@ -43,13 +43,14 @@ class StatsController : BaseLegacyController<StatsControllerBinding>() {
     /**
      * Returns the toolbar title to show when this controller is attached.
      */
-    override fun getTitle() = activity?.getString(MR.strings.statistics)
+    override fun getTitle() = "Dashboard"
 
     override fun createBinding(inflater: LayoutInflater) = StatsControllerBinding.inflate(inflater)
 
     override fun onViewCreated(view: View) {
         super.onViewCreated(view)
         scrollViewWith(binding.statsScrollView, true)
+        handleActivityDashboard()
         handleGeneralStats()
         if (mangaDistinct.isNotEmpty()) {
             binding.viewDetailLayout.setOnClickListener {
@@ -58,6 +59,16 @@ class StatsController : BaseLegacyController<StatsControllerBinding>() {
             handleStatusDistribution()
         }
         if (scoresList.isNotEmpty()) handleScoreDistribution()
+    }
+
+    private fun handleActivityDashboard() {
+        with(binding) {
+            dashboardTimeText.text = presenter.getWeeklyReadDuration()
+            dashboardPagesText.text = presenter.getWeeklyPagesViewed().toString()
+            dashboardCompletedText.text = presenter.getWeeklyCompleted().toString()
+            dashboardSourceUsageText.text = presenter.getWeeklySourceUsage()
+            dashboardRecentCompletionsText.text = presenter.getRecentCompletions()
+        }
     }
 
     private fun handleGeneralStats() {
