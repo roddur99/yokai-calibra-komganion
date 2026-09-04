@@ -17,7 +17,9 @@ import eu.kanade.tachiyomi.ui.base.presenter.BaseCoroutinePresenter
 import eu.kanade.tachiyomi.ui.more.stats.StatsHelper.getReadDuration
 import java.time.DayOfWeek
 import java.time.LocalDate
+import java.time.YearMonth
 import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import kotlinx.coroutines.runBlocking
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
@@ -159,6 +161,58 @@ class StatsPresenter(
             .take(5)
             .joinToString("\n") { "${it.itemTitle} — ${it.seriesTitle}" }
             .ifBlank { "No completions recorded yet." }
+
+    data class ReadingTimeBucket(
+        val label: String,
+        val durationMs: Long,
+    )
+
+    fun getDailyReadingTime(dayCount: Int = 7): List<ReadingTimeBucket> {
+        val zone = ZoneId.systemDefault()
+        val formatter = DateTimeFormatter.ofPattern("EEE")
+        val today = LocalDate.now(zone)
+        val sessionsByDay = getActivitySessions().groupBy {
+            java.time.Instant.ofEpochMilli(it.startedAt).atZone(zone).toLocalDate()
+        }
+
+        return (dayCount - 1 downTo 0).map { daysAgo ->
+            val day = today.minusDays(daysAgo.toLong())
+            ReadingTimeBucket(day.format(formatter), sessionsByDay[day].orEmpty().sumOf { it.durationMs })
+        }
+    }
+
+    fun getWeeklyReadingTime(weekCount: Int = 8): List<ReadingTimeBucket> {
+        val zone = ZoneId.systemDefault()
+        val currentWeek = LocalDate.now(zone).with(DayOfWeek.MONDAY)
+        val sessionsByWeek = getActivitySessions().groupBy {
+            java.time.Instant.ofEpochMilli(it.startedAt).atZone(zone).toLocalDate().with(DayOfWeek.MONDAY)
+        }
+
+        return (weekCount - 1 downTo 0).map { weeksAgo ->
+            val week = currentWeek.minusWeeks(weeksAgo.toLong())
+            ReadingTimeBucket(
+                label = "${week.monthValue}/${week.dayOfMonth}",
+                durationMs = sessionsByWeek[week].orEmpty().sumOf { it.durationMs },
+            )
+        }
+    }
+
+    fun getMonthlyReadingTime(monthCount: Int = 6): List<ReadingTimeBucket> {
+        val zone = ZoneId.systemDefault()
+        val formatter = DateTimeFormatter.ofPattern("MMM")
+        val currentMonth = YearMonth.now(zone)
+        val sessionsByMonth = getActivitySessions().groupBy {
+            YearMonth.from(java.time.Instant.ofEpochMilli(it.startedAt).atZone(zone))
+        }
+
+        return (monthCount - 1 downTo 0).map { monthsAgo ->
+            val month = currentMonth.minusMonths(monthsAgo.toLong())
+            ReadingTimeBucket(
+                label = month.format(formatter),
+                durationMs = sessionsByMonth[month].orEmpty().sumOf { it.durationMs },
+            )
+        }
+    }
 
     fun getReadDuration(): String {
         val chaptersTime = runBlocking {
