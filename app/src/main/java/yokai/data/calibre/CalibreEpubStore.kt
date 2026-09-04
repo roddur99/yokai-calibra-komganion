@@ -14,6 +14,11 @@ class CalibreEpubStore(
 
     fun isDownloaded(bookId: String): Boolean = fileFor(bookId).isFile
 
+    fun downloadedCount(): Int =
+        directory.listFiles { file -> file.isFile && file.extension.equals("epub", ignoreCase = true) }
+            ?.size
+            ?: 0
+
     suspend fun download(book: CalibreBook): File = withContext(Dispatchers.IO) {
         val url = book.epubUrl ?: error("This Calibre book has no EPUB format")
         directory.mkdirs()
