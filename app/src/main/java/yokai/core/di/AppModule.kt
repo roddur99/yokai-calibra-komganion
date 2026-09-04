@@ -37,6 +37,7 @@ import yokai.data.Database
 import yokai.data.DatabaseHandler
 import yokai.data.connection.ConnectionTester
 import yokai.data.calibre.CalibreCatalogClient
+import yokai.data.calibre.CalibreEpubStore
 import yokai.data.connection.CredentialStore
 import yokai.domain.SplashState
 import yokai.domain.storage.StorageManager
@@ -122,6 +123,7 @@ fun appModule(app: Application) = module {
     single { CredentialStore(app) }
     single { ConnectionTester(get()) }
     single { CalibreCatalogClient(get(), get(), get()) }
+    single { CalibreEpubStore(app, get()) }
 
     single { JavaScriptEngine(app) }
 
