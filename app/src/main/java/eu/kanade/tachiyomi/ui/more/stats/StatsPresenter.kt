@@ -25,6 +25,9 @@ import uy.kohesive.injekt.injectLazy
 import yokai.data.DatabaseHandler
 import yokai.domain.activity.ReadingActivityRepository
 import yokai.domain.activity.model.ReadingActivity
+import yokai.domain.chapter.interactor.GetChapter
+import yokai.domain.komga.annotation.KomgaBookAnnotationRepository
+import yokai.domain.manga.interactor.GetManga
 import yokai.domain.manga.interactor.GetLibraryManga
 import yokai.domain.track.interactor.GetTrack
 import yokai.i18n.MR
@@ -45,12 +48,36 @@ class StatsPresenter(
     private val getLibraryManga: GetLibraryManga by injectLazy()
     private val getTrack: GetTrack by injectLazy()
     private val readingActivityRepository: ReadingActivityRepository by injectLazy()
+    private val komgaBookAnnotationRepository: KomgaBookAnnotationRepository by injectLazy()
+    private val getManga: GetManga by injectLazy()
+    private val getChapter: GetChapter by injectLazy()
 
+    private val focusedMangas = runBlocking { getManga.awaitAll() }
+        .filter { it.source == KomgaSource.ID || it.source == GalleryKomganionSource.ID }
+    private val focusedChapters = runBlocking {
+        focusedMangas.flatMap { manga ->
+            manga.id?.let { getChapter.awaitAll(it, false) }.orEmpty()
+        }
+    }
     private val libraryMangas = getLibrary()
     val mangaDistinct = libraryMangas.distinct()
 
     private fun getLibrary(): MutableList<LibraryManga> {
         return runBlocking { getLibraryManga.await() }.toMutableList()
+    }
+
+    fun getFocusedTitleCount(): Int = focusedMangas.size
+
+    fun getFocusedChapterCount(): Int = focusedChapters.size
+
+    fun getFocusedReadChapterCount(): Int = focusedChapters.count { it.read }
+
+    fun getFocusedGalleryCount(): Int =
+        focusedMangas.count { it.source == GalleryKomganionSource.ID }
+
+    fun getAnnotationScores(): List<Double> = runBlocking {
+        komgaBookAnnotationRepository.getAll()
+            .mapNotNull { it.score?.toDouble() }
     }
 
     fun getTracks(manga: Manga): MutableList<Track> {
