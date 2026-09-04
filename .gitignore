@@ -11,3 +11,6 @@
 .kotlin/
 kls_database.db
 weblate.conf
+keystore.properties
+*.jks
+*.keystore

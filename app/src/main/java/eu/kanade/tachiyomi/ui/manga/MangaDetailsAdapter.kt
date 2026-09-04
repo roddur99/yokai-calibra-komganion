@@ -141,6 +141,7 @@ class MangaDetailsAdapter(
         fun topCoverHeight(): Int
         fun showFloatingActionMode(view: TextView, content: String? = null, isTag: Boolean = false)
         fun showChapterFilter()
+        fun showKomgaAnnotation(item: ChapterItem)
         fun favoriteManga(longPress: Boolean)
         fun copyContentToClipboard(content: String, label: StringResource, useToast: Boolean = false)
         fun copyContentToClipboard(content: String, label: Int, useToast: Boolean = false)

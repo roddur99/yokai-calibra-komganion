@@ -34,6 +34,11 @@ This fork currently adds or changes the following:
 - Slideshow playback inside a book.
 - Sequential or shuffled playback.
 - Selectable 2, 3, 5, 10, or 15 second playback interval.
+- Per-book scores from 1–10 and free-text notes.
+  - Scores and notes are stored locally in the app's SQLite database.
+  - Komga book rows display the saved score and whether notes are present.
+  - Annotations can be exported to and restored from a versioned JSON file.
+  - Import merges by Komga book ID; newer records win without erasing unrelated local annotations.
 
 ### Gallery Komganion
 
@@ -50,7 +55,8 @@ This fork currently adds or changes the following:
 - Main tabs reduced to Komga, Recents, and Galleries.
 - Branding changed to **Yokai Komganion**.
 - Extension-update badges, background extension checks, and extension actions were removed from the focused navigation.
-- Existing application ID is retained for now while development continues.
+- Dedicated adaptive launcher and themed icon.
+- Permanent release application ID: `com.rodro.yokaikomganion`.
 
 ## Gallery companion server
 
@@ -73,13 +79,10 @@ Do not expose a development server directly to the public internet. Use authenti
 
 ## Current status
 
-The Komga and Gallery reading flows are working on Android devices and emulators. This remains a development build rather than a published release.
+Version **0.1.1** builds successfully as an Android release. Komga and Gallery browsing, reading, deletion, metadata, slideshow, shuffle, playback-speed controls, local Komga book annotations, and annotation JSON recovery have been tested on Android devices and emulators.
 
 Known follow-up work includes:
 
-- Further settings and UI cleanup.
-- A dedicated launcher icon.
-- Release signing and installation documentation.
 - Better connection and offline error states.
 - Stable Gallery page IDs before finalizing the companion API.
 - Automatic Komga cache refresh after book deletion is intentionally deferred; use manual refresh.
@@ -106,6 +109,53 @@ app/build/outputs/apk/dev/debug/
 ```
 
 For an Android emulator, the x86_64 build is normally appropriate. A modern physical Android phone will normally use the arm64-v8a build.
+
+## Signed release build
+
+Android requires release APKs to be signed. The signing key establishes the app's permanent update identity, so every future release must use the same keystore.
+
+The repository includes `keystore.properties.example`. Create the signing key locally:
+
+```powershell
+keytool -genkeypair -v \`
+    -keystore "$env:USERPROFILE\.android\yokai-komganion-release.jks" \`
+    -alias yokai-komganion \`
+    -keyalg RSA \`
+    -keysize 4096 \`
+    -validity 10000
+```
+
+Copy the example configuration:
+
+```powershell
+Copy-Item .\keystore.properties.example .\keystore.properties
+```
+
+Configure it with the local keystore path and passwords:
+
+```properties
+storeFile=C:/Users/your-name/.android/yokai-komganion-release.jks
+storePassword=YOUR_KEYSTORE_PASSWORD
+keyAlias=yokai-komganion
+keyPassword=YOUR_KEY_PASSWORD
+```
+
+Build the signed English release:
+
+```powershell
+.\gradlew.bat "-Dorg.gradle.java.home=$jdk17" :app:assembleDevRelease
+```
+
+Signed APKs are written under:
+
+```text
+app/build/outputs/apk/dev/release/
+```
+
+Use the `x86_64` APK for the usual Android emulator and the `arm64-v8a` APK for modern physical phones such as the Galaxy S24.
+
+> [!CAUTION]
+> Never commit `keystore.properties`, passwords, or the `.jks` file. Back up the keystore securely. Losing it prevents future APKs from updating installations signed with that key.
 
 ## Upstream projects
 

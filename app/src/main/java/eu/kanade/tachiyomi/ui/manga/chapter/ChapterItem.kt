@@ -12,12 +12,14 @@ import eu.kanade.tachiyomi.domain.manga.models.Manga
 import eu.kanade.tachiyomi.ui.manga.MangaDetailsAdapter
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
+import yokai.domain.komga.annotation.model.KomgaBookAnnotation
 import yokai.domain.ui.UiPreferences
 
 class ChapterItem(chapter: Chapter, val manga: Manga) :
     BaseChapterItem<ChapterHolder, AbstractHeaderItem<FlexibleViewHolder>>(chapter) {
 
     var isLocked = false
+    var komgaAnnotation: KomgaBookAnnotation? = null
 
     override fun getLayoutRes(): Int {
         return R.layout.chapters_item

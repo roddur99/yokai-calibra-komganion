@@ -1,0 +1,52 @@
+CREATE TABLE komga_book_annotations (
+    book_id TEXT NOT NULL PRIMARY KEY,
+    score INTEGER CHECK (score BETWEEN 1 AND 10),
+    notes TEXT NOT NULL DEFAULT '',
+    book_title TEXT NOT NULL,
+    series_title TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+);
+
+findByBookId:
+SELECT *
+FROM komga_book_annotations
+WHERE book_id = :bookId;
+
+findAll:
+SELECT *
+FROM komga_book_annotations
+ORDER BY updated_at DESC;
+
+upsert:
+INSERT INTO komga_book_annotations (
+    book_id,
+    score,
+    notes,
+    book_title,
+    series_title,
+    created_at,
+    updated_at
+)
+VALUES (
+    :bookId,
+    :score,
+    :notes,
+    :bookTitle,
+    :seriesTitle,
+    :createdAt,
+    :updatedAt
+)
+ON CONFLICT(book_id) DO UPDATE SET
+    score = excluded.score,
+    notes = excluded.notes,
+    book_title = excluded.book_title,
+    series_title = excluded.series_title,
+    updated_at = excluded.updated_at;
+
+deleteByBookId:
+DELETE FROM komga_book_annotations
+WHERE book_id = :bookId;
+
+deleteAll:
+DELETE FROM komga_book_annotations;

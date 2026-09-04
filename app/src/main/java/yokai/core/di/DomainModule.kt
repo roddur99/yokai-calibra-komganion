@@ -6,6 +6,7 @@ import yokai.data.chapter.ChapterRepositoryImpl
 import yokai.data.extension.repo.ExtensionRepoRepositoryImpl
 import yokai.data.history.HistoryRepositoryImpl
 import yokai.data.library.custom.CustomMangaRepositoryImpl
+import yokai.data.komga.annotation.KomgaBookAnnotationRepositoryImpl
 import yokai.data.manga.MangaRepositoryImpl
 import yokai.data.source.browse.filter.SavedSearchRepositoryImpl
 import yokai.data.track.TrackRepositoryImpl
@@ -37,6 +38,7 @@ import yokai.domain.library.custom.interactor.CreateCustomManga
 import yokai.domain.library.custom.interactor.DeleteCustomManga
 import yokai.domain.library.custom.interactor.GetCustomManga
 import yokai.domain.library.custom.interactor.RelinkCustomManga
+import yokai.domain.komga.annotation.KomgaBookAnnotationRepository
 import yokai.domain.manga.MangaRepository
 import yokai.domain.manga.interactor.GetLibraryManga
 import yokai.domain.manga.interactor.GetManga
@@ -75,6 +77,8 @@ fun domainModule() = module {
     factory { DeleteCustomManga(get()) }
     factory { GetCustomManga(get()) }
     factory { RelinkCustomManga(get()) }
+
+    single<KomgaBookAnnotationRepository> { KomgaBookAnnotationRepositoryImpl(get()) }
 
     single<MangaRepository> { MangaRepositoryImpl(get()) }
     factory { GetManga(get()) }
