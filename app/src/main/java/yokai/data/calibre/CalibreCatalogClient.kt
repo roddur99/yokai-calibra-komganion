@@ -2,6 +2,7 @@ package yokai.data.calibre
 
 import android.util.Xml
 import eu.kanade.tachiyomi.network.NetworkHelper
+import java.io.File
 import java.io.IOException
 import java.io.StringReader
 import java.security.MessageDigest
@@ -60,6 +61,15 @@ class CalibreCatalogClient(
         executeAuthenticated(url.toHttpUrlOrNull() ?: error("Invalid Calibre resource URL")).use { response ->
             if (!response.isSuccessful) error("Calibre returned HTTP ${response.code}")
             response.body.bytes()
+        }
+    }
+
+    suspend fun downloadTo(url: String, destination: File) = withContext(Dispatchers.IO) {
+        executeAuthenticated(url.toHttpUrlOrNull() ?: error("Invalid Calibre resource URL")).use { response ->
+            if (!response.isSuccessful) error("Calibre returned HTTP ${response.code}")
+            destination.outputStream().buffered().use { output ->
+                response.body.byteStream().use { input -> input.copyTo(output) }
+            }
         }
     }
 
