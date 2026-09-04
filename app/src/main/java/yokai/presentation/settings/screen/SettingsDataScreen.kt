@@ -66,6 +66,7 @@ import uy.kohesive.injekt.injectLazy
 import yokai.data.komga.annotation.KomgaAnnotationBackup
 import yokai.data.connection.ConnectionTester
 import yokai.data.connection.CredentialStore
+import yokai.data.calibre.CalibreCatalogClient
 import yokai.domain.activity.ReadingActivityRepository
 import yokai.domain.backup.BackupPreferences
 import yokai.domain.connection.ConnectionPreferences
@@ -124,6 +125,7 @@ object SettingsDataScreen : ComposableSettings() {
         val preferences = remember { Injekt.get<ConnectionPreferences>() }
         val credentialStore = remember { Injekt.get<CredentialStore>() }
         val connectionTester = remember { Injekt.get<ConnectionTester>() }
+        val catalogClient = remember { Injekt.get<CalibreCatalogClient>() }
         val scope = rememberCoroutineScope()
         var baseUrl by remember { mutableStateOf(preferences.calibreBaseUrl().get()) }
         var username by remember { mutableStateOf(preferences.calibreUsername().get()) }
@@ -132,6 +134,7 @@ object SettingsDataScreen : ComposableSettings() {
         var lightNovelTag by remember { mutableStateOf(preferences.calibreLightNovelTag().get()) }
         var testing by remember { mutableStateOf(false) }
         var result by remember { mutableStateOf<ConnectionTestResult?>(null) }
+        var catalogCount by remember { mutableStateOf<Int?>(null) }
 
         return Preference.PreferenceGroup(
             title = "Calibre light novels",
@@ -194,8 +197,21 @@ object SettingsDataScreen : ComposableSettings() {
                                         preferences.calibreLibraryId().set(libraryId.trim())
                                         preferences.calibreLightNovelTag().set(lightNovelTag.trim())
                                         credentialStore.calibrePassword = password
+                                        result = runCatching { catalogClient.getLightNovels().size }
+                                            .fold(
+                                                onSuccess = {
+                                                    catalogCount = it
+                                                    ConnectionTestResult.Success
+                                                },
+                                                onFailure = {
+                                                    ConnectionTestResult.Failure(
+                                                        it.message ?: "Unable to load the Calibre catalog",
+                                                    )
+                                                },
+                                            )
+                                    } else {
+                                        result = tested
                                     }
-                                    result = tested
                                     testing = false
                                 }
                             },
@@ -206,7 +222,7 @@ object SettingsDataScreen : ComposableSettings() {
                         }
                         when (val tested = result) {
                             ConnectionTestResult.Success -> Text(
-                                "Connection successful",
+                                "Connection successful · ${catalogCount ?: 0} light novels found",
                                 color = MaterialTheme.colorScheme.primary,
                             )
                             is ConnectionTestResult.Failure -> Text(
