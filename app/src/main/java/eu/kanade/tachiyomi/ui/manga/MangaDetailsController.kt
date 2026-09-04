@@ -1411,7 +1411,7 @@ class MangaDetailsController :
                 .setOnClickListener {
                     val scoreText = scoreInput.text?.toString()?.trim().orEmpty()
                     val score = scoreText.toIntOrNull()
-                    if (scoreText.isNotEmpty() && score !in 1..10) {
+                    if (scoreText.isNotEmpty() && (score == null || score !in 1..10)) {
                         scoreInput.error = "Enter a score from 1 to 10"
                         return@setOnClickListener
                     }
