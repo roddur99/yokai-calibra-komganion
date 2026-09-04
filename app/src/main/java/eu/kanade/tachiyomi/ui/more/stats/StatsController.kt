@@ -51,6 +51,7 @@ class StatsController : BaseLegacyController<StatsControllerBinding>() {
         super.onViewCreated(view)
         scrollViewWith(binding.statsScrollView, true)
         handleActivityDashboard()
+        handleReadingTimeHistory()
         handleGeneralStats()
         if (mangaDistinct.isNotEmpty()) {
             binding.viewDetailLayout.setOnClickListener {
@@ -68,6 +69,50 @@ class StatsController : BaseLegacyController<StatsControllerBinding>() {
             dashboardCompletedText.text = presenter.getWeeklyCompleted().toString()
             dashboardSourceUsageText.text = presenter.getWeeklySourceUsage()
             dashboardRecentCompletionsText.text = presenter.getRecentCompletions()
+        }
+    }
+
+    private fun handleReadingTimeHistory() {
+        binding.dashboardPeriodGroup.addOnButtonCheckedListener { _, checkedId, isChecked ->
+            if (!isChecked) return@addOnButtonCheckedListener
+            val buckets = when (checkedId) {
+                R.id.dashboard_period_daily -> presenter.getDailyReadingTime()
+                R.id.dashboard_period_weekly -> presenter.getWeeklyReadingTime()
+                else -> presenter.getMonthlyReadingTime()
+            }
+            showReadingTimeHistory(buckets)
+        }
+        binding.dashboardPeriodMonthly.isChecked = true
+    }
+
+    private fun showReadingTimeHistory(buckets: List<StatsPresenter.ReadingTimeBucket>) {
+        val entries = buckets.mapIndexed { index, bucket ->
+            BarEntry(index.toFloat(), bucket.durationMs / 60_000f)
+        }
+        val dataSet = BarDataSet(entries, "Reading time").apply {
+            color = activity!!.getResourceColor(R.attr.colorSecondary)
+            setDrawValues(false)
+        }
+
+        with(binding.dashboardMonthlyChart) {
+            axisLeft.axisMinimum = 0f
+            axisLeft.textColor = activity!!.getResourceColor(R.attr.colorOnBackground)
+            axisRight.isEnabled = false
+            xAxis.apply {
+                position = XAxis.XAxisPosition.BOTTOM
+                setDrawGridLines(false)
+                granularity = 1f
+                textColor = activity!!.getResourceColor(R.attr.colorOnBackground)
+                valueFormatter = object : ValueFormatter() {
+                    override fun getFormattedValue(value: Float): String =
+                        buckets.getOrNull(value.roundToInt())?.label.orEmpty()
+                }
+            }
+            description.isEnabled = false
+            legend.isEnabled = false
+            setTouchEnabled(false)
+            data = BarData(dataSet).apply { barWidth = 0.55f }
+            invalidate()
         }
     }
 
