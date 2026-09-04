@@ -59,14 +59,21 @@ class CalibreEpubReaderActivity : AppCompatActivity() {
             this.title = title
             navigationIcon = ContextCompat.getDrawable(context, R.drawable.ic_arrow_back_24dp)
             setNavigationOnClickListener { finish() }
-            menu.add(Menu.NONE, ACTION_READER_SETTINGS, 0, "Aa")
+            menu.add(Menu.NONE, ACTION_TABLE_OF_CONTENTS, 0, "Contents")
+                .setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM)
+            menu.add(Menu.NONE, ACTION_READER_SETTINGS, 1, "Aa")
                 .setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
             setOnMenuItemClickListener { item ->
-                if (item.itemId == ACTION_READER_SETTINGS) {
-                    showReaderSettings()
-                    true
-                } else {
-                    false
+                when (item.itemId) {
+                    ACTION_TABLE_OF_CONTENTS -> {
+                        showTableOfContents()
+                        true
+                    }
+                    ACTION_READER_SETTINGS -> {
+                        showReaderSettings()
+                        true
+                    }
+                    else -> false
                 }
             }
         }
@@ -157,6 +164,36 @@ class CalibreEpubReaderActivity : AppCompatActivity() {
                 .collect { locator -> progressStore.save(bookId, locator) }
         }
     }
+
+    private fun showTableOfContents() {
+        val entries = publication?.tableOfContents.orEmpty().flattenTableOfContents()
+        if (entries.isEmpty()) {
+            Toast.makeText(this, "This book does not provide a table of contents", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val labels = entries.map { entry ->
+            val indentation = "\u00a0\u00a0".repeat(entry.depth)
+            indentation + entry.link.title.orEmpty().ifBlank { "Untitled section" }
+        }.toTypedArray()
+
+        AlertDialog.Builder(this)
+            .setTitle("Table of contents")
+            .setItems(labels) { _, index ->
+                val moved = navigator?.go(entries[index].link, animated = true) == true
+                if (!moved) {
+                    Toast.makeText(this, "Unable to open this section", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("Close", null)
+            .show()
+    }
+
+    private fun List<Link>.flattenTableOfContents(depth: Int = 0): List<TableOfContentsEntry> =
+        flatMap { link ->
+            listOf(TableOfContentsEntry(link, depth)) +
+                link.children.flattenTableOfContents(depth + 1)
+        }
 
     private fun showReaderSettings() {
         val mode = if (readerPreferences.scroll) "Scrolling" else "Paginated"
@@ -325,6 +362,8 @@ class CalibreEpubReaderActivity : AppCompatActivity() {
         publication = null
     }
 
+    private data class TableOfContentsEntry(val link: Link, val depth: Int)
+
     companion object {
         private const val EXTRA_PATH = "epub_path"
         private const val EXTRA_TITLE = "book_title"
@@ -332,6 +371,7 @@ class CalibreEpubReaderActivity : AppCompatActivity() {
         private const val NAVIGATOR_TAG = "calibre_epub_navigator"
 
         private const val ACTION_READER_SETTINGS = 0x7100
+        private const val ACTION_TABLE_OF_CONTENTS = 0x7106
         private const val ACTION_DEFINE = 0x7101
         private const val ACTION_GOOGLE = 0x7102
         private const val ACTION_TRANSLATE = 0x7103
