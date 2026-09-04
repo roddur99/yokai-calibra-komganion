@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -25,6 +26,7 @@ import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -33,6 +35,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -53,8 +56,18 @@ fun BooksScreen(
     var query by remember { mutableStateOf("") }
     var sort by remember { mutableStateOf(BookSort.SERIES) }
     var selected by remember { mutableStateOf<CalibreBook?>(null) }
+    val gridState = rememberLazyGridState()
+    val topBarScrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
 
-    Scaffold(topBar = { TopAppBar(title = { Text("Light Novels") }) }) { padding ->
+    Scaffold(
+        modifier = Modifier.nestedScroll(topBarScrollBehavior.nestedScrollConnection),
+        topBar = {
+            TopAppBar(
+                title = { Text("Light Novels") },
+                scrollBehavior = topBarScrollBehavior,
+            )
+        },
+    ) { padding ->
         when (state) {
             BooksState.Loading -> Box(
                 Modifier.fillMaxSize().padding(padding),
@@ -130,6 +143,7 @@ fun BooksScreen(
                     )
                     LazyVerticalGrid(
                         columns = GridCells.Adaptive(112.dp),
+                        state = gridState,
                         modifier = Modifier.weight(1f),
                         contentPadding = PaddingValues(12.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
