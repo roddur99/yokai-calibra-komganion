@@ -12,9 +12,11 @@ import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import yokai.data.calibre.CalibreBook
 import yokai.data.calibre.CalibreCatalogClient
+import yokai.data.calibre.CalibreEpubStore
 
 class BooksController(
     private val catalogClient: CalibreCatalogClient = Injekt.get(),
+    private val epubStore: CalibreEpubStore = Injekt.get(),
 ) : BaseComposeController(), BottomNavBarInterface {
 
     private var state by mutableStateOf<BooksState>(BooksState.Loading)
@@ -30,6 +32,8 @@ class BooksController(
             state = state,
             coverLoader = catalogClient::getBytes,
             onRetry = ::refresh,
+            onDownload = ::download,
+            onDeleteDownload = ::deleteDownload,
         )
     }
 
@@ -38,10 +42,67 @@ class BooksController(
         viewScope.launch {
             state = runCatching { catalogClient.getLightNovels() }
                 .fold(
-                    onSuccess = { BooksState.Content(it) },
+                    onSuccess = { books ->
+                        BooksState.Content(
+                            books = books,
+                            downloadedIds = books.filter { epubStore.isDownloaded(it.id) }
+                                .mapTo(mutableSetOf()) { it.id },
+                        )
+                    },
                     onFailure = { BooksState.Error(it.message ?: "Unable to load Calibre") },
                 )
         }
+    }
+
+    private fun download(book: CalibreBook) {
+        updateContent { it.copy(busyIds = it.busyIds + book.id, operationError = null) }
+        viewScope.launch {
+            runCatching { epubStore.download(book) }
+                .onSuccess {
+                    updateContent {
+                        it.copy(
+                            downloadedIds = it.downloadedIds + book.id,
+                            busyIds = it.busyIds - book.id,
+                        )
+                    }
+                }
+                .onFailure { error ->
+                    updateContent {
+                        it.copy(
+                            busyIds = it.busyIds - book.id,
+                            operationError = error.message ?: "Unable to download EPUB",
+                        )
+                    }
+                }
+        }
+    }
+
+    private fun deleteDownload(book: CalibreBook) {
+        updateContent { it.copy(busyIds = it.busyIds + book.id, operationError = null) }
+        viewScope.launch {
+            runCatching { check(epubStore.delete(book.id)) { "Unable to delete EPUB" } }
+                .onSuccess {
+                    updateContent {
+                        it.copy(
+                            downloadedIds = it.downloadedIds - book.id,
+                            busyIds = it.busyIds - book.id,
+                        )
+                    }
+                }
+                .onFailure { error ->
+                    updateContent {
+                        it.copy(
+                            busyIds = it.busyIds - book.id,
+                            operationError = error.message ?: "Unable to delete EPUB",
+                        )
+                    }
+                }
+        }
+    }
+
+    private fun updateContent(transform: (BooksState.Content) -> BooksState.Content) {
+        val content = state as? BooksState.Content ?: return
+        state = transform(content)
     }
 
     override fun canChangeTabs(block: () -> Unit) = true
@@ -49,6 +110,13 @@ class BooksController(
 
 sealed interface BooksState {
     data object Loading : BooksState
-    data class Content(val books: List<CalibreBook>) : BooksState
+
+    data class Content(
+        val books: List<CalibreBook>,
+        val downloadedIds: Set<String> = emptySet(),
+        val busyIds: Set<String> = emptySet(),
+        val operationError: String? = null,
+    ) : BooksState
+
     data class Error(val message: String) : BooksState
 }
