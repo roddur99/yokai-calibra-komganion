@@ -16,4 +16,18 @@ class ConnectionPreferences(
     fun komgaUsername() = preferenceStore.getString("komganion_komga_username")
 
     fun galleryBaseUrl() = preferenceStore.getString("komganion_gallery_base_url")
+
+    fun calibreBaseUrl() = preferenceStore.getString("komganion_calibre_base_url")
+
+    fun calibreUsername() = preferenceStore.getString("komganion_calibre_username")
+
+    fun calibreLibraryId() = preferenceStore.getString(
+        "komganion_calibre_library_id",
+        "Calibre_Library",
+    )
+
+    fun calibreLightNovelTag() = preferenceStore.getString(
+        "komganion_calibre_light_novel_tag",
+        "Light Novel",
+    )
 }
