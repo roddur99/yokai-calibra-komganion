@@ -16,6 +16,7 @@ import android.graphics.drawable.Icon
 import android.os.Build
 import android.os.Bundle
 import android.service.chooser.ChooserAction
+import android.text.InputType
 import android.view.LayoutInflater
 import android.view.Menu
 import android.view.MenuInflater
@@ -24,7 +25,9 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.InputMethodManager
+import android.widget.EditText
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.annotation.ColorInt
 import androidx.annotation.FloatRange
@@ -55,6 +58,7 @@ import coil3.size.SizeResolver
 import com.bluelinelabs.conductor.ControllerChangeHandler
 import com.bluelinelabs.conductor.ControllerChangeType
 import com.google.android.material.chip.Chip
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.BaseTransientBottomBar
 import com.google.android.material.snackbar.Snackbar
 import dev.icerock.moko.resources.StringResource
@@ -1354,6 +1358,78 @@ class MangaDetailsController :
         } catch (e: Exception) {
             context.toast(e.message)
         }
+    }
+
+    override fun showKomgaAnnotation(item: ChapterItem) {
+        val context = activity ?: return
+        val annotation = item.komgaAnnotation
+        val padding = (20 * context.resources.displayMetrics.density).toInt()
+
+        val scoreInput = EditText(context).apply {
+            hint = "Score (1–10)"
+            inputType = InputType.TYPE_CLASS_NUMBER
+            setText(annotation?.score?.toString().orEmpty())
+        }
+        val notesInput = EditText(context).apply {
+            hint = "Notes"
+            inputType = InputType.TYPE_CLASS_TEXT or
+                InputType.TYPE_TEXT_FLAG_CAP_SENTENCES or
+                InputType.TYPE_TEXT_FLAG_MULTI_LINE
+            minLines = 4
+            maxLines = 10
+            setText(annotation?.notes.orEmpty())
+        }
+        val content = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(padding, 0, padding, 0)
+            addView(
+                scoreInput,
+                LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                ),
+            )
+            addView(
+                notesInput,
+                LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                ),
+            )
+        }
+
+        val dialog = MaterialAlertDialogBuilder(context)
+            .setTitle("Score and notes")
+            .setView(content)
+            .setNegativeButton("Cancel", null)
+            .setNeutralButton("Clear", null)
+            .setPositiveButton("Save", null)
+            .create()
+
+        dialog.setOnShowListener {
+            dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE)
+                .setOnClickListener {
+                    val scoreText = scoreInput.text?.toString()?.trim().orEmpty()
+                    val score = scoreText.toIntOrNull()
+                    if (scoreText.isNotEmpty() && score !in 1..10) {
+                        scoreInput.error = "Enter a score from 1 to 10"
+                        return@setOnClickListener
+                    }
+
+                    presenter.saveKomgaAnnotation(
+                        item = item,
+                        score = score,
+                        notes = notesInput.text?.toString().orEmpty(),
+                    )
+                    dialog.dismiss()
+                }
+            dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_NEUTRAL)
+                .setOnClickListener {
+                    presenter.saveKomgaAnnotation(item, score = null, notes = "")
+                    dialog.dismiss()
+                }
+        }
+        dialog.show()
     }
 
     override fun openInWebView() {
