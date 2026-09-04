@@ -11,8 +11,11 @@ import android.view.View
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ProgressBar
+import android.widget.SeekBar
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.addCallback
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
@@ -34,11 +37,14 @@ import org.readium.r2.streamer.PublicationOpener
 import org.readium.r2.streamer.parser.DefaultPublicationParser
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
+import yokai.data.calibre.CalibreReaderPreferencesStore
 import yokai.data.calibre.CalibreReadingProgressStore
 
 class CalibreEpubReaderActivity : AppCompatActivity() {
 
     private val progressStore: CalibreReadingProgressStore = Injekt.get()
+    private val readerPreferencesStore: CalibreReaderPreferencesStore = Injekt.get()
+    private var readerPreferences = readerPreferencesStore.get()
     private var publication: Publication? = null
     private var navigator: EpubNavigatorFragment? = null
     private val containerId = View.generateViewId()
@@ -53,6 +59,16 @@ class CalibreEpubReaderActivity : AppCompatActivity() {
             this.title = title
             navigationIcon = ContextCompat.getDrawable(context, R.drawable.ic_arrow_back_24dp)
             setNavigationOnClickListener { finish() }
+            menu.add(Menu.NONE, ACTION_READER_SETTINGS, 0, "Aa")
+                .setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
+            setOnMenuItemClickListener { item ->
+                if (item.itemId == ACTION_READER_SETTINGS) {
+                    showReaderSettings()
+                    true
+                } else {
+                    false
+                }
+            }
         }
         val readerContainer = FrameLayout(this).apply {
             id = containerId
@@ -124,6 +140,7 @@ class CalibreEpubReaderActivity : AppCompatActivity() {
         val navigatorFactory = EpubNavigatorFactory(opened)
         supportFragmentManager.fragmentFactory = navigatorFactory.createFragmentFactory(
             initialLocator = progressStore.get(bookId),
+            initialPreferences = readerPreferences.toReadium(),
             configuration = EpubNavigatorFragment.Configuration(
                 selectionActionModeCallback = selectionActionModeCallback,
             ),
@@ -139,6 +156,108 @@ class CalibreEpubReaderActivity : AppCompatActivity() {
                 .drop(1)
                 .collect { locator -> progressStore.save(bookId, locator) }
         }
+    }
+
+    private fun showReaderSettings() {
+        val mode = if (readerPreferences.scroll) "Scrolling" else "Paginated"
+        val labels = arrayOf(
+            "Reading mode: $mode",
+            "Theme: ${readerPreferences.theme.name.lowercase().replaceFirstChar(Char::uppercase)}",
+            "Font size: ${readerPreferences.fontSize}%",
+            "Margins: ${readerPreferences.margins}%",
+            "Line spacing: ${readerPreferences.lineHeight}%",
+        )
+        AlertDialog.Builder(this)
+            .setTitle("Reader settings")
+            .setItems(labels) { _, index ->
+                when (index) {
+                    0 -> showReadingModeDialog()
+                    1 -> showThemeDialog()
+                    2 -> showSlider("Font size", 50, 250, readerPreferences.fontSize, "%") {
+                        updateReaderPreferences(readerPreferences.copy(fontSize = it))
+                    }
+                    3 -> showSlider("Margins", 0, 300, readerPreferences.margins, "%") {
+                        updateReaderPreferences(readerPreferences.copy(margins = it))
+                    }
+                    4 -> showSlider("Line spacing", 100, 250, readerPreferences.lineHeight, "%") {
+                        updateReaderPreferences(readerPreferences.copy(lineHeight = it))
+                    }
+                }
+            }
+            .show()
+    }
+
+    private fun showReadingModeDialog() {
+        val values = arrayOf("Paginated", "Scrolling")
+        AlertDialog.Builder(this)
+            .setTitle("Reading mode")
+            .setSingleChoiceItems(values, if (readerPreferences.scroll) 1 else 0) { dialog, which ->
+                updateReaderPreferences(readerPreferences.copy(scroll = which == 1))
+                dialog.dismiss()
+            }
+            .show()
+    }
+
+    private fun showThemeDialog() {
+        val themes = CalibreReaderPreferencesStore.ThemeValue.entries
+        AlertDialog.Builder(this)
+            .setTitle("Theme")
+            .setSingleChoiceItems(
+                themes.map { it.name.lowercase().replaceFirstChar(Char::uppercase) }.toTypedArray(),
+                themes.indexOf(readerPreferences.theme),
+            ) { dialog, which ->
+                updateReaderPreferences(readerPreferences.copy(theme = themes[which]))
+                dialog.dismiss()
+            }
+            .show()
+    }
+
+    private fun showSlider(
+        title: String,
+        minimum: Int,
+        maximum: Int,
+        current: Int,
+        suffix: String,
+        onSave: (Int) -> Unit,
+    ) {
+        val label = TextView(this)
+        val slider = SeekBar(this).apply {
+            max = maximum - minimum
+            progress = current - minimum
+        }
+        fun updateLabel(value: Int) {
+            label.text = "$title: $value$suffix"
+        }
+        updateLabel(current)
+        slider.setOnSeekBarChangeListener(
+            object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
+                    updateLabel(progress + minimum)
+                }
+
+                override fun onStartTrackingTouch(seekBar: SeekBar) = Unit
+                override fun onStopTrackingTouch(seekBar: SeekBar) = Unit
+            },
+        )
+        val padding = (24 * resources.displayMetrics.density).toInt()
+        val content = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(padding, padding, padding, 0)
+            addView(label)
+            addView(slider)
+        }
+        AlertDialog.Builder(this)
+            .setTitle(title)
+            .setView(content)
+            .setNegativeButton("Cancel", null)
+            .setPositiveButton("Save") { _, _ -> onSave(slider.progress + minimum) }
+            .show()
+    }
+
+    private fun updateReaderPreferences(values: CalibreReaderPreferencesStore.Values) {
+        readerPreferences = values
+        readerPreferencesStore.save(values)
+        navigator?.submitPreferences(values.toReadium())
     }
 
     private val selectionActionModeCallback = object : ActionMode.Callback {
@@ -212,6 +331,7 @@ class CalibreEpubReaderActivity : AppCompatActivity() {
         private const val EXTRA_BOOK_ID = "book_id"
         private const val NAVIGATOR_TAG = "calibre_epub_navigator"
 
+        private const val ACTION_READER_SETTINGS = 0x7100
         private const val ACTION_DEFINE = 0x7101
         private const val ACTION_GOOGLE = 0x7102
         private const val ACTION_TRANSLATE = 0x7103
