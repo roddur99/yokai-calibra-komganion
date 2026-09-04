@@ -47,6 +47,8 @@ fun BooksScreen(
     state: BooksState,
     coverLoader: suspend (String) -> ByteArray,
     onRetry: () -> Unit,
+    onDownload: (CalibreBook) -> Unit,
+    onDeleteDownload: (CalibreBook) -> Unit,
 ) {
     var query by remember { mutableStateOf("") }
     var sort by remember { mutableStateOf(BookSort.SERIES) }
@@ -95,6 +97,13 @@ fun BooksScreen(
                         )
                 }
                 Column(Modifier.fillMaxSize().padding(padding)) {
+                    state.operationError?.let { message ->
+                        Text(
+                            message,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                        )
+                    }
                     OutlinedTextField(
                         value = query,
                         onValueChange = { query = it },
@@ -127,7 +136,12 @@ fun BooksScreen(
                         verticalArrangement = Arrangement.spacedBy(16.dp),
                     ) {
                         items(shown, key = { it.id }) { book ->
-                            BookCard(book, coverLoader) { selected = book }
+                            BookCard(
+                                book = book,
+                                coverLoader = coverLoader,
+                                isDownloaded = book.id in state.downloadedIds,
+                                onClick = { selected = book },
+                            )
                         }
                     }
                 }
@@ -136,6 +150,9 @@ fun BooksScreen(
     }
 
     selected?.let { book ->
+        val content = state as? BooksState.Content
+        val isDownloaded = content?.downloadedIds?.contains(book.id) == true
+        val isBusy = content?.busyIds?.contains(book.id) == true
         AlertDialog(
             onDismissRequest = { selected = null },
             title = { Text(book.title) },
@@ -160,6 +177,17 @@ fun BooksScreen(
                     Text("Close")
                 }
             },
+            dismissButton = {
+                when {
+                    isBusy -> CircularProgressIndicator()
+                    isDownloaded -> TextButton(onClick = { onDeleteDownload(book) }) {
+                        Text("Delete download")
+                    }
+                    book.epubUrl != null -> TextButton(onClick = { onDownload(book) }) {
+                        Text("Download EPUB")
+                    }
+                }
+            },
         )
     }
 }
@@ -168,6 +196,7 @@ fun BooksScreen(
 private fun BookCard(
     book: CalibreBook,
     coverLoader: suspend (String) -> ByteArray,
+    isDownloaded: Boolean,
     onClick: () -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)) {
@@ -184,6 +213,13 @@ private fun BookCard(
                 .aspectRatio(2f / 3f)
                 .padding(bottom = 6.dp),
         )
+        if (isDownloaded) {
+            Text(
+                text = "Downloaded",
+                color = MaterialTheme.colorScheme.primary,
+                style = MaterialTheme.typography.labelSmall,
+            )
+        }
         Text(
             text = book.title,
             style = MaterialTheme.typography.bodyMedium,
