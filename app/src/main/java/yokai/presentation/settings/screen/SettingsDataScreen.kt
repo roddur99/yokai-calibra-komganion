@@ -47,11 +47,15 @@ import eu.kanade.tachiyomi.util.system.withUIContext
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.collections.immutable.toImmutableMap
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import uy.kohesive.injekt.injectLazy
+import yokai.data.komga.annotation.KomgaAnnotationBackup
 import yokai.domain.backup.BackupPreferences
+import yokai.domain.komga.annotation.KomgaBookAnnotationRepository
 import yokai.domain.storage.StorageManager
 import yokai.domain.storage.StoragePreferences
 import yokai.i18n.MR
@@ -93,6 +97,7 @@ object SettingsDataScreen : ComposableSettings() {
         return persistentListOf(
             getStorageLocationPreference(storagePreferences = storagePreferences),
             getBackupAndRestoreGroup(backupPreferences = backupPreferences),
+            getKomgaAnnotationBackupGroup(),
             getDataGroup(),
         )
     }
@@ -245,6 +250,82 @@ object SettingsDataScreen : ComposableSettings() {
                 Preference.PreferenceItem.InfoPreference(
                     stringResource(MR.strings.backup_info) +
                         "\n\n" + stringResource(MR.strings.last_auto_backup_info, relativeTimeSpanString(lastAutoBackup)),
+                ),
+            ),
+        )
+    }
+
+    @Composable
+    private fun getKomgaAnnotationBackupGroup(): Preference.PreferenceGroup {
+        val context = LocalContext.current
+        val scope = rememberCoroutineScope()
+        val repository = remember { Injekt.get<KomgaBookAnnotationRepository>() }
+        val json = remember { Injekt.get<kotlinx.serialization.json.Json>() }
+        val backup = remember(repository, json) {
+            KomgaAnnotationBackup(repository, json)
+        }
+
+        val exportAnnotations = rememberLauncherForActivityResult(
+            ActivityResultContracts.CreateDocument("application/json"),
+        ) { uri ->
+            if (uri == null) return@rememberLauncherForActivityResult
+            scope.launch {
+                try {
+                    val count = withContext(Dispatchers.IO) {
+                        val content = backup.export()
+                        context.contentResolver.openOutputStream(uri, "wt")
+                            ?.bufferedWriter()
+                            ?.use { it.write(content) }
+                            ?: error("Unable to open the selected file")
+                        repository.getAll().size
+                    }
+                    context.toast("Exported $count Komga annotations")
+                } catch (e: Exception) {
+                    Logger.e(e) { "Unable to export Komga annotations" }
+                    context.toast("Export failed: ${e.message ?: "unknown error"}")
+                }
+            }
+        }
+
+        val importAnnotations = rememberLauncherForActivityResult(
+            ActivityResultContracts.OpenDocument(),
+        ) { uri ->
+            if (uri == null) return@rememberLauncherForActivityResult
+            scope.launch {
+                try {
+                    val result = withContext(Dispatchers.IO) {
+                        val content = context.contentResolver.openInputStream(uri)
+                            ?.bufferedReader()
+                            ?.use { it.readText() }
+                            ?: error("Unable to open the selected file")
+                        backup.restore(content)
+                    }
+                    context.toast(result.summary(), Toast.LENGTH_LONG)
+                } catch (e: Exception) {
+                    Logger.e(e) { "Unable to import Komga annotations" }
+                    context.toast("Import failed: ${e.message ?: "invalid backup"}", Toast.LENGTH_LONG)
+                }
+            }
+        }
+
+        return Preference.PreferenceGroup(
+            title = "Komga annotations",
+            preferenceItems = persistentListOf(
+                Preference.PreferenceItem.TextPreference(
+                    title = "Export scores and notes",
+                    subtitle = "Save a versioned JSON backup",
+                    onClick = {
+                        exportAnnotations.launch(
+                            "komga-annotations-${System.currentTimeMillis()}.json",
+                        )
+                    },
+                ),
+                Preference.PreferenceItem.TextPreference(
+                    title = "Import scores and notes",
+                    subtitle = "Merge a JSON backup with local annotations",
+                    onClick = {
+                        importAnnotations.launch(arrayOf("application/json", "text/plain"))
+                    },
                 ),
             ),
         )
