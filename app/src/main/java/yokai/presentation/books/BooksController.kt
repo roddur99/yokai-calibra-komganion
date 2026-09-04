@@ -19,8 +19,6 @@ class BooksController(
 
     private var state by mutableStateOf<BooksState>(BooksState.Loading)
 
-    override fun getTitle() = "Books"
-
     override fun onViewCreated(view: View) {
         super.onViewCreated(view)
         refresh()
