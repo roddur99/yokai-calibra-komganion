@@ -1,0 +1,20 @@
+CREATE TABLE reading_activity (
+    activity_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    source_id INTEGER NOT NULL,
+    manga_id INTEGER,
+    chapter_id INTEGER,
+    item_key TEXT NOT NULL,
+    series_title TEXT NOT NULL,
+    item_title TEXT NOT NULL,
+    started_at INTEGER NOT NULL,
+    ended_at INTEGER NOT NULL,
+    duration_ms INTEGER NOT NULL DEFAULT 0,
+    pages_viewed INTEGER NOT NULL DEFAULT 0,
+    completed INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE INDEX reading_activity_started_at_index
+ON reading_activity(started_at);
+
+CREATE INDEX reading_activity_source_id_index
+ON reading_activity(source_id);
