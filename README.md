@@ -89,7 +89,7 @@ The roadmap is intentionally incremental. Version assignments may change as feat
 |---|---|
 | **v0.1.2 — shipped** | Komga book covers, loading/error placeholders, and covers in the reader chapter sheet. |
 | **v0.1.3 — shipped** | Score sorting, rated/unrated and has-notes filters, and a recently rated view. |
-| **v0.1.4** | Local activity dashboard foundation: reading sessions, weekly totals, recent completions, Komga/Gallery usage, monthly history, completion calendar, series averages, and an optional post-finish rating prompt. |
+| **v0.1.4 — shipped** | Private local dashboard with reading sessions, daily/weekly/monthly history, recent completions, Komga/Gallery usage, completion calendar, series averages, most-read series, and portable activity backup. |
 | **v0.1.5** | Books-tab technical prototype using Calibre OPDS and a dedicated reflowable EPUB reader. |
 | **v0.1.6** | Reading queue, improved shuffle, cross-item playback, and delete-then-advance workflows. |
 | **v0.2.0** | Optional multi-device synchronization through Gallery Komganion for annotations, activity, completions, bookmarks, and queue state. |
@@ -99,7 +99,7 @@ Activity tracking will begin when the dashboard foundation ships. Time-spent and
 
 ## Current status
 
-Version **0.1.3** adds Komga score sorting, rated/unrated and has-notes filtering, and a global Recently Rated view. These annotation controls persist locally and remain hidden for non-Komga sources. Komga and Gallery browsing, reading, deletion, metadata, slideshow, shuffle, playback-speed controls, local annotations, annotation JSON recovery, cover row recycling, and annotation discovery have been tested on Android devices and emulators.
+Version **0.1.4** adds a private local activity dashboard with accurate indexed Komga/Gallery counts, weekly totals, daily/weekly/monthly reading-time charts, recent completions, a completion calendar, series score averages, and most-read series. Scores, notes, and raw reading sessions can be exported and merged into another device without duplicating activity. Komga and Gallery browsing, reading, deletion, metadata, slideshow, shuffle, playback-speed controls, annotations, cover row recycling, discovery filters, dashboard statistics, and JSON recovery have been tested on Android devices and emulators.
 
 Known follow-up work includes:
 
