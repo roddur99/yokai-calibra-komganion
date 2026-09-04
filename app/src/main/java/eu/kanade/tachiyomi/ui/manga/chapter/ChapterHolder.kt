@@ -9,6 +9,8 @@ import androidx.core.animation.doOnStart
 import androidx.core.view.isVisible
 import androidx.core.widget.TextViewCompat
 import coil3.request.Disposable
+import coil3.request.error
+import coil3.request.placeholder
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.data.download.model.Download
 import eu.kanade.tachiyomi.databinding.ChaptersItemBinding
@@ -60,7 +62,10 @@ class ChapterHolder(
                     lastModified = 0L,
                     inLibrary = false,
                 ),
-            )
+            ) {
+                placeholder(R.drawable.ic_book_24dp)
+                error(R.drawable.ic_broken_image_24dp)
+            }
         } else {
             binding.komgaBookCover.setImageDrawable(null)
         }
