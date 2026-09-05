@@ -1,19 +1,19 @@
 <div align="center">
 
-<img src="./.github/readme-images/app-icon.webp" alt="Yokai Komganion logo" height="200" width="200" />
+<img src="./.github/readme-images/app-icon.webp" alt="Yokai Calibra Komganion logo" height="200" width="200" />
 
-# Yokai Komganion
+# Yokai Calibra Komganion
 
 A focused Android reader for Komga libraries, filesystem image galleries, and Calibre light novels.
 
 </div>
 
 > [!IMPORTANT]
-> Yokai Komganion is a personal, experimental fork. It is not affiliated with the Komga project, Mihon, or the original Yōkai project, and it does not host or provide content.
+> Yokai Calibra Komganion is a personal, experimental fork. It is not affiliated with the Komga project, Mihon, or the original Yōkai project, and it does not host or provide content.
 
 ## What this fork is
 
-Yokai Komganion keeps Yōkai's mature browsing and reader experience while narrowing the application around three self-hosted sources:
+Yokai Calibra Komganion keeps Yōkai's mature browsing and reader experience while narrowing the application around three self-hosted sources:
 
 - **Komga** for comics and manga managed by an existing Komga server.
 - **Galleries** for ordinary image folders exposed by the companion [Gallery Komganion server](https://github.com/roddur99/gallery-komganion).
@@ -84,7 +84,7 @@ This fork currently adds or changes the following:
 ### Focused interface
 
 - Main tabs focused on Komga, Recents, Galleries, and Books.
-- Branding changed to **Yokai Komganion**.
+- Branding changed to **Yokai Calibra Komganion**.
 - Extension-update badges, background extension checks, and extension actions were removed from the focused navigation.
 - Dedicated adaptive launcher and themed icon.
 - Permanent release application ID: `com.rodro.yokaikomganion`.
@@ -103,7 +103,7 @@ It:
 
 The server and Android client are separate repositories:
 
-- Android client: [roddur99/yokai-komganion](https://github.com/roddur99/yokai-komganion)
+- Android client: [roddur99/yokai-calibra-komganion](https://github.com/roddur99/yokai-calibra-komganion)
 - Companion server: [roddur99/gallery-komganion](https://github.com/roddur99/gallery-komganion)
 
 Do not expose a development server directly to the public internet. Use authentication and a trusted private network.
@@ -168,8 +168,8 @@ The repository includes `keystore.properties.example`. Create the signing key lo
 
 ```powershell
 keytool -genkeypair -v \`
-    -keystore "$env:USERPROFILE\.android\yokai-komganion-release.jks" \`
-    -alias yokai-komganion \`
+    -keystore "$env:USERPROFILE\.android\yokai-calibra-komganion-release.jks" \`
+    -alias yokai-calibra-komganion \`
     -keyalg RSA \`
     -keysize 4096 \`
     -validity 10000
@@ -184,9 +184,9 @@ Copy-Item .\keystore.properties.example .\keystore.properties
 Configure it with the local keystore path and passwords:
 
 ```properties
-storeFile=C:/Users/your-name/.android/yokai-komganion-release.jks
+storeFile=C:/Users/your-name/.android/yokai-calibra-komganion-release.jks
 storePassword=YOUR_KEYSTORE_PASSWORD
-keyAlias=yokai-komganion
+keyAlias=yokai-calibra-komganion
 keyPassword=YOUR_KEY_PASSWORD
 ```
 
@@ -209,7 +209,7 @@ Use the `x86_64` APK for the usual Android emulator and the `arm64-v8a` APK for 
 
 ## Upstream projects
 
-Yokai Komganion is derived from [Yōkai](https://github.com/null2264/yokai), which is itself based on the Tachiyomi/Mihon ecosystem.
+Yokai Calibra Komganion is derived from [Yōkai](https://github.com/null2264/yokai), which is itself based on the Tachiyomi/Mihon ecosystem.
 
 The fork benefits from upstream work including:
 
