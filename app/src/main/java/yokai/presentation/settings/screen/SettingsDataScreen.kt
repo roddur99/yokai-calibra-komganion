@@ -63,6 +63,7 @@ import kotlinx.coroutines.withContext
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import uy.kohesive.injekt.injectLazy
+import yokai.data.calibre.CalibreReadingProgressStore
 import yokai.data.komga.annotation.KomgaAnnotationBackup
 import yokai.data.connection.ConnectionTester
 import yokai.data.connection.CredentialStore
@@ -396,9 +397,10 @@ object SettingsDataScreen : ComposableSettings() {
         val scope = rememberCoroutineScope()
         val repository = remember { Injekt.get<KomgaBookAnnotationRepository>() }
         val activityRepository = remember { Injekt.get<ReadingActivityRepository>() }
+        val calibreProgressStore = remember { Injekt.get<CalibreReadingProgressStore>() }
         val json = remember { Injekt.get<kotlinx.serialization.json.Json>() }
-        val backup = remember(repository, activityRepository, json) {
-            KomgaAnnotationBackup(repository, activityRepository, json)
+        val backup = remember(repository, activityRepository, calibreProgressStore, json) {
+            KomgaAnnotationBackup(repository, activityRepository, calibreProgressStore, json)
         }
 
         val exportAnnotations = rememberLauncherForActivityResult(
@@ -415,7 +417,7 @@ object SettingsDataScreen : ComposableSettings() {
                             ?: error("Unable to open the selected file")
                         repository.getAll().size
                     }
-                    context.toast("Exported $count annotations and reading activity")
+                    context.toast("Exported $count annotations, reading activity, and EPUB progress")
                 } catch (e: Exception) {
                     Logger.e(e) { "Unable to export Komga annotations" }
                     context.toast("Export failed: ${e.message ?: "unknown error"}")
@@ -448,8 +450,8 @@ object SettingsDataScreen : ComposableSettings() {
             title = "Annotations and activity",
             preferenceItems = persistentListOf(
                 Preference.PreferenceItem.TextPreference(
-                    title = "Export scores, notes, and activity",
-                    subtitle = "Save annotations and reading history as versioned JSON",
+                    title = "Export scores, notes, activity, and EPUB progress",
+                    subtitle = "Save annotations, reading history, and exact light-novel resume positions as versioned JSON",
                     onClick = {
                         exportAnnotations.launch(
                             "komganion-data-${System.currentTimeMillis()}.json",
@@ -457,8 +459,8 @@ object SettingsDataScreen : ComposableSettings() {
                     },
                 ),
                 Preference.PreferenceItem.TextPreference(
-                    title = "Import scores, notes, and activity",
-                    subtitle = "Merge a JSON backup without duplicating reading sessions",
+                    title = "Import scores, notes, activity, and EPUB progress",
+                    subtitle = "Merge newer annotations and EPUB positions without duplicating reading sessions",
                     onClick = {
                         importAnnotations.launch(arrayOf("application/json", "text/plain"))
                     },
