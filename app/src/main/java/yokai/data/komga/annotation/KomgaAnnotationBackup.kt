@@ -3,6 +3,7 @@ package yokai.data.komga.annotation
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import yokai.data.calibre.CalibreReadingProgressStore
 import yokai.domain.activity.ReadingActivityRepository
 import yokai.domain.activity.model.ReadingActivity
 import yokai.domain.komga.annotation.KomgaBookAnnotationRepository
@@ -11,6 +12,7 @@ import yokai.domain.komga.annotation.model.KomgaBookAnnotation
 class KomgaAnnotationBackup(
     private val repository: KomgaBookAnnotationRepository,
     private val activityRepository: ReadingActivityRepository,
+    private val calibreProgressStore: CalibreReadingProgressStore,
     private val json: Json,
 ) {
     suspend fun export(): String {
@@ -19,6 +21,7 @@ class KomgaAnnotationBackup(
             exportedAt = System.currentTimeMillis(),
             annotations = repository.getAll().map { it.toBackupEntry() },
             activities = activityRepository.getAll().map { it.toActivityEntry() },
+            calibreProgress = calibreProgressStore.exportEntries().map { it.toProgressEntry() },
         )
         return json.encodeToString(backup)
     }
@@ -75,6 +78,19 @@ class KomgaAnnotationBackup(
             activitiesImported++
         }
 
+        var progressImported = 0
+        var progressUpdated = 0
+        var progressUnchanged = 0
+        var progressInvalid = 0
+        backup.calibreProgress.forEach { entry ->
+            when (calibreProgressStore.restore(entry.toStoreEntry())) {
+                CalibreReadingProgressStore.RestoreOutcome.IMPORTED -> progressImported++
+                CalibreReadingProgressStore.RestoreOutcome.UPDATED -> progressUpdated++
+                CalibreReadingProgressStore.RestoreOutcome.UNCHANGED -> progressUnchanged++
+                CalibreReadingProgressStore.RestoreOutcome.INVALID -> progressInvalid++
+            }
+        }
+
         return ImportResult(
             imported = imported,
             updated = updated,
@@ -83,6 +99,10 @@ class KomgaAnnotationBackup(
             activitiesImported = activitiesImported,
             activitiesUnchanged = activitiesUnchanged,
             activitiesInvalid = activitiesInvalid,
+            progressImported = progressImported,
+            progressUpdated = progressUpdated,
+            progressUnchanged = progressUnchanged,
+            progressInvalid = progressInvalid,
         )
     }
 
@@ -92,7 +112,21 @@ class KomgaAnnotationBackup(
         val exportedAt: Long,
         val annotations: List<BackupEntry>,
         val activities: List<ActivityEntry> = emptyList(),
+        val calibreProgress: List<CalibreProgressEntry> = emptyList(),
     )
+
+    @Serializable
+    private data class CalibreProgressEntry(
+        val storageKey: String,
+        val locatorJson: String,
+        val updatedAt: Long,
+    ) {
+        fun toStoreEntry() = CalibreReadingProgressStore.ExportEntry(
+            storageKey = storageKey,
+            locatorJson = locatorJson,
+            updatedAt = updatedAt,
+        )
+    }
 
     @Serializable
     private data class ActivityEntry(
@@ -164,6 +198,9 @@ class KomgaAnnotationBackup(
         updatedAt = updatedAt,
     )
 
+    private fun CalibreReadingProgressStore.ExportEntry.toProgressEntry() =
+        CalibreProgressEntry(storageKey, locatorJson, updatedAt)
+
     private fun ReadingActivity.toActivityEntry() = ActivityEntry(
         sourceId, mangaId, chapterId, itemKey, seriesTitle, itemTitle, startedAt, endedAt,
         durationMs, pagesViewed, completed,
@@ -180,13 +217,19 @@ class KomgaAnnotationBackup(
         val activitiesImported: Int,
         val activitiesUnchanged: Int,
         val activitiesInvalid: Int,
+        val progressImported: Int,
+        val progressUpdated: Int,
+        val progressUnchanged: Int,
+        val progressInvalid: Int,
     ) {
         fun summary(): String =
             "Annotations — imported: $imported, updated: $updated, unchanged: $unchanged, invalid: $invalid. " +
-                "Activity — imported: $activitiesImported, unchanged: $activitiesUnchanged, invalid: $activitiesInvalid"
+                "Activity — imported: $activitiesImported, unchanged: $activitiesUnchanged, invalid: $activitiesInvalid. " +
+                "EPUB progress — imported: $progressImported, updated: $progressUpdated, " +
+                "unchanged: $progressUnchanged, invalid: $progressInvalid"
     }
 
     private companion object {
-        const val CURRENT_VERSION = 2
+        const val CURRENT_VERSION = 3
     }
 }
