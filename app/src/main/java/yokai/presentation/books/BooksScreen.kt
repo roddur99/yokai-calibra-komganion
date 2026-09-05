@@ -63,12 +63,14 @@ fun BooksScreen(
     onRetry: () -> Unit,
     onDownload: (CalibreBook) -> Unit,
     onDeleteDownload: (CalibreBook) -> Unit,
+    onResetProgress: (CalibreBook) -> Unit,
     onOpen: (CalibreBook) -> Unit,
 ) {
     var query by remember { mutableStateOf("") }
     var sort by remember { mutableStateOf(BookSort.SERIES) }
     var filter by remember { mutableStateOf(BookFilter.ALL) }
     var selected by remember { mutableStateOf<CalibreBook?>(null) }
+    var resetCandidate by remember { mutableStateOf<CalibreBook?>(null) }
     val gridState = rememberLazyGridState()
     val lifecycleOwner = LocalLifecycleOwner.current
     var progressRefreshKey by remember { mutableIntStateOf(0) }
@@ -251,14 +253,58 @@ fun BooksScreen(
                 }
             },
             dismissButton = {
-                when {
-                    isBusy -> CircularProgressIndicator()
-                    isDownloaded -> TextButton(onClick = { onDeleteDownload(book) }) {
-                        Text("Delete download")
+                if (isBusy) {
+                    CircularProgressIndicator()
+                } else {
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        if (progress != null) {
+                            TextButton(
+                                onClick = {
+                                    selected = null
+                                    resetCandidate = book
+                                },
+                            ) {
+                                Text("Reset progress")
+                            }
+                        }
+                        when {
+                            isDownloaded -> TextButton(onClick = { onDeleteDownload(book) }) {
+                                Text("Delete download")
+                            }
+                            book.epubUrl != null -> TextButton(onClick = { onDownload(book) }) {
+                                Text("Download EPUB")
+                            }
+                        }
                     }
-                    book.epubUrl != null -> TextButton(onClick = { onDownload(book) }) {
-                        Text("Download EPUB")
-                    }
+                }
+            },
+        )
+    }
+
+    resetCandidate?.let { book ->
+        AlertDialog(
+            onDismissRequest = { resetCandidate = null },
+            title = { Text("Reset reading progress?") },
+            text = {
+                Text(
+                    "This removes the saved position for ${book.title}. " +
+                        "The downloaded EPUB and reading-time history will be kept.",
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onResetProgress(book)
+                        progressRefreshKey++
+                        resetCandidate = null
+                    },
+                ) {
+                    Text("Reset")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { resetCandidate = null }) {
+                    Text("Cancel")
                 }
             },
         )
