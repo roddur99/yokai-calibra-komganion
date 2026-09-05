@@ -63,6 +63,7 @@ This fork currently adds or changes the following:
   - Works with a Calibre virtual library while still enforcing the configured tag query.
 - Dedicated Books tab with full-resolution covers.
 - Search by title, author, or series.
+- Discover complete per-book tags from Calibre and filter the Books tab with a searchable tag picker.
 - Sort by series order, title, author, or newest.
 - Filter to downloaded books.
 - Persistent EPUB downloads for offline reading.
