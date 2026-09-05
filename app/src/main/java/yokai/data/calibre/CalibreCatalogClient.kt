@@ -193,7 +193,7 @@ class CalibreCatalogClient(
                 tagsByUuid[uuid] = buildSet {
                     if (tags != null) {
                         for (index in 0 until tags.length()) {
-                            tags.optString(index).trim().takeIf(String::isNotEmpty)?.let(::add)
+                            tags.optString(index).trim().takeIf(String::isNotEmpty)?.let { add(it) }
                         }
                     }
                 }
