@@ -9,7 +9,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items as listItems
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -70,7 +73,18 @@ fun BooksScreen(
     var sort by remember { mutableStateOf(BookSort.SERIES) }
     var filter by remember { mutableStateOf(BookFilter.ALL) }
     var selected by remember { mutableStateOf<CalibreBook?>(null) }
+    var selectedTag by remember { mutableStateOf<String?>(null) }
+    var showTagFilter by remember { mutableStateOf(false) }
+    var tagQuery by remember { mutableStateOf("") }
     var resetCandidate by remember { mutableStateOf<CalibreBook?>(null) }
+    val availableTags = remember(state) {
+        (state as? BooksState.Content)
+            ?.books
+            ?.flatMap { it.tags }
+            ?.distinctBy { it.lowercase() }
+            ?.sortedWith(String.CASE_INSENSITIVE_ORDER)
+            .orEmpty()
+    }
     val gridState = rememberLazyGridState()
     val lifecycleOwner = LocalLifecycleOwner.current
     var progressRefreshKey by remember { mutableIntStateOf(0) }
@@ -113,10 +127,14 @@ fun BooksScreen(
                 val progressById = remember(state.books, progressRefreshKey) {
                     state.books.associate { it.id to progressLoader(it.id) }
                 }
-                val shown = remember(state.books, state.downloadedIds, query, sort, filter) {
+                val shown = remember(state.books, state.downloadedIds, query, sort, filter, selectedTag) {
                     state.books
                         .filter { book ->
                             filter == BookFilter.ALL || book.id in state.downloadedIds
+                        }
+                        .filter { book ->
+                            selectedTag == null ||
+                                book.tags.any { it.equals(selectedTag, ignoreCase = true) }
                         }
                         .filter {
                             query.isBlank() ||
@@ -181,6 +199,17 @@ fun BooksScreen(
                             onClick = { filter = BookFilter.DOWNLOADED },
                             label = { Text("Downloaded (${state.downloadedIds.size})") },
                         )
+                        FilterChip(
+                            selected = selectedTag != null,
+                            onClick = { showTagFilter = true },
+                            label = {
+                                Text(
+                                    selectedTag?.let { "Tag: $it" } ?: "Tags (${availableTags.size})",
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            },
+                        )
                     }
                     Text(
                         "${shown.size} books",
@@ -207,6 +236,71 @@ fun BooksScreen(
                 }
             }
         }
+    }
+
+    if (showTagFilter) {
+        val matchingTags = remember(availableTags, tagQuery) {
+            availableTags.filter { tagQuery.isBlank() || it.contains(tagQuery, ignoreCase = true) }
+        }
+        AlertDialog(
+            onDismissRequest = { showTagFilter = false },
+            title = { Text("Filter by Calibre tag") },
+            text = {
+                Column {
+                    OutlinedTextField(
+                        value = tagQuery,
+                        onValueChange = { tagQuery = it },
+                        label = { Text("Search tags") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    LazyColumn(
+                        modifier = Modifier.fillMaxWidth().heightIn(max = 420.dp),
+                        contentPadding = PaddingValues(top = 8.dp),
+                    ) {
+                        item {
+                            Text(
+                                text = "All tags",
+                                color = if (selectedTag == null) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.onSurface
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        selectedTag = null
+                                        showTagFilter = false
+                                    }
+                                    .padding(vertical = 12.dp),
+                            )
+                        }
+                        listItems(matchingTags, key = { it.lowercase() }) { tag ->
+                            Text(
+                                text = tag,
+                                color = if (tag.equals(selectedTag, ignoreCase = true)) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.onSurface
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        selectedTag = tag
+                                        showTagFilter = false
+                                    }
+                                    .padding(vertical = 12.dp),
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showTagFilter = false }) {
+                    Text("Close")
+                }
+            },
+        )
     }
 
     selected?.let { book ->
