@@ -23,7 +23,6 @@ import androidx.fragment.app.commitNow
 import com.google.android.material.appbar.MaterialToolbar
 import eu.kanade.tachiyomi.R
 import java.io.File
-import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import org.readium.r2.navigator.SelectableNavigator
 import org.readium.r2.navigator.epub.EpubNavigatorFactory
@@ -58,6 +57,8 @@ class CalibreEpubReaderActivity : AppCompatActivity() {
     private var activitySeriesTitle: String = ""
     private var sessionStartedAt: Long? = null
     private var sessionStartProgress: Int = 0
+    private lateinit var locationLabel: TextView
+    private var totalPositions: Int = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // The publication-backed FragmentFactory is created asynchronously. Rebuild the
@@ -87,6 +88,11 @@ class CalibreEpubReaderActivity : AppCompatActivity() {
                 }
             }
         }
+        locationLabel = TextView(this).apply {
+            gravity = Gravity.CENTER
+            setPadding(12, 6, 12, 6)
+            visibility = View.GONE
+        }
         val readerContainer = FrameLayout(this).apply {
             id = containerId
             addView(
@@ -113,6 +119,13 @@ class CalibreEpubReaderActivity : AppCompatActivity() {
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     0,
                     1f,
+                ),
+            )
+            addView(
+                locationLabel,
+                LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
                 ),
             )
         }
@@ -156,6 +169,7 @@ class CalibreEpubReaderActivity : AppCompatActivity() {
                 return
             }
         publication = opened
+        totalPositions = opened.positions().size
 
         val navigatorFactory = EpubNavigatorFactory(opened)
         supportFragmentManager.fragmentFactory = navigatorFactory.createFragmentFactory(
@@ -174,9 +188,29 @@ class CalibreEpubReaderActivity : AppCompatActivity() {
         startReadingSession()
         lifecycleScope.launch {
             navigator.currentLocator
-                .drop(1)
-                .collect { locator -> progressStore.save(bookId, locator) }
+                .collect { locator ->
+                    progressStore.save(bookId, locator)
+                    updateLocationLabel(
+                        position = locator.locations.position,
+                        totalProgression = locator.locations.totalProgression,
+                    )
+                }
         }
+    }
+
+    private fun updateLocationLabel(
+        position: Int?,
+        totalProgression: Double?,
+    ) {
+        val percentage = totalProgression
+            ?.let { (it * 100).toInt().coerceIn(0, 100) }
+        locationLabel.text = buildList {
+            if (position != null && totalPositions > 0) {
+                add("Location ${position.coerceIn(1, totalPositions)} of $totalPositions")
+            }
+            if (percentage != null) add("$percentage%")
+        }.joinToString(" · ")
+        locationLabel.visibility = if (locationLabel.text.isBlank()) View.GONE else View.VISIBLE
     }
 
     private fun showTableOfContents() {

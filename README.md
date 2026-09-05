@@ -63,6 +63,7 @@ This fork currently adds or changes the following:
   - Works with a Calibre virtual library while still enforcing the configured tag query.
 - Dedicated Books tab with full-resolution covers.
 - Search by title, author, or series.
+- Discover complete per-book tags from Calibre and filter the Books tab with a searchable tag picker.
 - Sort by series order, title, author, or newest.
 - Filter to downloaded books.
 - Persistent EPUB downloads for offline reading.
@@ -73,7 +74,7 @@ This fork currently adds or changes the following:
   - Single-page layout in landscape mode.
   - Table-of-contents navigation with nested sections.
   - Selected-text actions for Define, Google, Translate, Copy, and Share when supported by installed apps.
-- Exact local resume positions and visible completion percentages.
+- Exact local resume positions, stable location numbers, and visible completion percentages.
   - Progress bars appear on started book cards.
   - Books are marked completed at approximately 100%.
   - Reading progress can be reset without deleting the EPUB or historical activity.

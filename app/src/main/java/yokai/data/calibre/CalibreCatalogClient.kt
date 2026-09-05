@@ -14,6 +14,7 @@ import okhttp3.HttpUrl
 import okhttp3.Request
 import okhttp3.Response
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+import org.json.JSONObject
 import org.xmlpull.v1.XmlPullParser
 import yokai.data.connection.CredentialStore
 import yokai.domain.connection.ConnectionPreferences
@@ -54,7 +55,7 @@ class CalibreCatalogClient(
             page.books.forEach { books[it.id] = it }
             nextUrl = page.nextUrl?.toHttpUrlOrNull()
         }
-        books.values.toList()
+        enrichTags(books.values.toList(), base, libraryId)
     }
 
     suspend fun getBytes(url: String): ByteArray = withContext(Dispatchers.IO) {
@@ -78,7 +79,10 @@ class CalibreCatalogClient(
         response.body.string()
     }
 
-    private fun executeAuthenticated(url: HttpUrl): Response {
+    private fun executeAuthenticated(
+        url: HttpUrl,
+        accept: String = "application/atom+xml",
+    ): Response {
         val configuredOrigin = configuredOrigin()
         val trustedOrigin = url.scheme == configuredOrigin.scheme &&
             url.host == configuredOrigin.host &&
@@ -90,7 +94,7 @@ class CalibreCatalogClient(
         val password = credentialStore.calibrePassword.orEmpty()
         val request = Request.Builder()
             .url(url)
-            .header("Accept", "application/atom+xml")
+            .header("Accept", accept)
             .get()
             .build()
         val first = client.newCall(request).execute()
@@ -159,6 +163,53 @@ class CalibreCatalogClient(
         return FeedPage(books, nextUrl)
     }
 
+    private fun enrichTags(
+        books: List<CalibreBook>,
+        base: HttpUrl,
+        libraryId: String,
+    ): List<CalibreBook> {
+        val bookByUuid = books.mapNotNull { book ->
+            normalizedUuid(book.id)?.let { it to book }
+        }.toMap()
+        if (bookByUuid.isEmpty()) return books
+
+        val tagsByUuid = mutableMapOf<String, Set<String>>()
+        bookByUuid.keys.chunked(METADATA_BATCH_SIZE).forEach { uuids ->
+            val builder = base.newBuilder().addPathSegments("ajax/books")
+            if (libraryId.isNotBlank()) builder.addPathSegment(libraryId)
+            val url = builder
+                .addQueryParameter("ids", uuids.joinToString(","))
+                .addQueryParameter("id_is_uuid", "true")
+                .addQueryParameter("category_urls", "false")
+                .build()
+            val response = executeAuthenticated(url, accept = "application/json").use { result ->
+                if (!result.isSuccessful) error("Calibre metadata returned HTTP ${result.code}")
+                JSONObject(result.body.string())
+            }
+            response.keys().forEach { key ->
+                val metadata = response.optJSONObject(key) ?: return@forEach
+                val uuid = normalizedUuid(metadata.optString("uuid")) ?: return@forEach
+                val tags = metadata.optJSONArray("tags")
+                tagsByUuid[uuid] = buildSet {
+                    if (tags != null) {
+                        for (index in 0 until tags.length()) {
+                            tags.optString(index).trim().takeIf(String::isNotEmpty)?.let { add(it) }
+                        }
+                    }
+                }
+            }
+        }
+        return books.map { book ->
+            val tags = normalizedUuid(book.id)?.let(tagsByUuid::get)
+            if (tags == null) book else book.copy(tags = tags)
+        }
+    }
+
+    private fun normalizedUuid(value: String): String? {
+        val candidate = value.substringAfterLast(':').trim()
+        return runCatching { UUID.fromString(candidate).toString() }.getOrNull()
+    }
+
     private fun digestAuthorization(
         request: Request,
         challenge: String,
@@ -215,6 +266,7 @@ class CalibreCatalogClient(
 
     private companion object {
         const val MAX_PAGES = 100
+        const val METADATA_BATCH_SIZE = 100
         val DIGEST_PARAMETER = Regex("""([A-Za-z]+)=(?:\"([^\"]*)\"|([^,\\s]+))""")
     }
 }
