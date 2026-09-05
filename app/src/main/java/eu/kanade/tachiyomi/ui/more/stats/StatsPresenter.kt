@@ -26,6 +26,10 @@ import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import uy.kohesive.injekt.injectLazy
 import yokai.data.DatabaseHandler
+import yokai.data.calibre.CalibreEpubStore
+import yokai.data.calibre.CalibreLibraryStatsStore
+import yokai.data.calibre.CalibreReadingProgressStore
+import yokai.data.calibre.CalibreReadingSource
 import yokai.domain.activity.ReadingActivityRepository
 import yokai.domain.activity.model.ReadingActivity
 import yokai.domain.chapter.interactor.GetChapter
@@ -54,6 +58,9 @@ class StatsPresenter(
     private val komgaBookAnnotationRepository: KomgaBookAnnotationRepository by injectLazy()
     private val getManga: GetManga by injectLazy()
     private val getChapter: GetChapter by injectLazy()
+    private val calibreEpubStore: CalibreEpubStore by injectLazy()
+    private val calibreLibraryStatsStore: CalibreLibraryStatsStore by injectLazy()
+    private val calibreReadingProgressStore: CalibreReadingProgressStore by injectLazy()
 
     private val focusedMangas = runBlocking { getManga.awaitAll() }
         .filter { it.source == KomgaSource.ID || it.source == GalleryKomganionSource.ID }
@@ -86,6 +93,14 @@ class StatsPresenter(
     fun getRatedBookCount(): Int = getAnnotationScores().size
 
     fun getRecordedSessionCount(): Int = getActivitySessions().size
+
+    fun getCalibreAvailableCount(): Int = calibreLibraryStatsStore.availableCount()
+
+    fun getCalibreDownloadedCount(): Int = calibreEpubStore.downloadedCount()
+
+    fun getCalibreStartedCount(): Int = calibreReadingProgressStore.startedCount()
+
+    fun getCalibreCompletedCount(): Int = calibreReadingProgressStore.completedCount()
 
     fun getTracks(manga: Manga): MutableList<Track> {
         return runBlocking { getTrack.awaitAllByMangaId(manga.id) }.toMutableList()
@@ -152,7 +167,8 @@ class StatsPresenter(
         val sessions = getWeeklyActivity()
         val komga = sessions.count { it.sourceId == KomgaSource.ID }
         val galleries = sessions.count { it.sourceId == GalleryKomganionSource.ID }
-        return "Komga $komga · Galleries $galleries"
+        val books = sessions.count { it.sourceId == CalibreReadingSource.ID }
+        return "Komga $komga · Galleries $galleries · Books $books"
     }
 
     fun getRecentCompletions(): String =
@@ -203,7 +219,8 @@ class StatsPresenter(
             .sortedWith(compareByDescending<Triple<String, Long, Int>> { it.second }.thenByDescending { it.third })
             .take(5)
             .mapIndexed { index, (series, duration, pages) ->
-                "${index + 1}. $series — ${duration.getReadDuration("0m")}, $pages pages"
+                val pageSummary = if (pages > 0) ", $pages pages" else ""
+                "${index + 1}. $series — ${duration.getReadDuration("0m")}$pageSummary"
             }
             .joinToString("\n")
             .ifBlank { "No reading activity yet." }

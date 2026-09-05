@@ -146,6 +146,7 @@ import yokai.core.migration.Migrator
 import yokai.domain.base.BasePreferences
 import yokai.domain.recents.interactor.GetRecents
 import yokai.i18n.MR
+import yokai.presentation.books.BooksController
 import yokai.presentation.core.Constants
 import yokai.presentation.extension.repo.ExtensionRepoController
 import yokai.presentation.gallery.GalleryBrowseController
@@ -501,6 +502,7 @@ open class MainActivity : BaseActivity<MainActivityBinding>() {
                     is RecentsController -> R.id.nav_recents
                     is KomgaBrowseController -> R.id.nav_library
                     is StatsController -> R.id.nav_dashboard
+                    is BooksController -> R.id.nav_books
                     is GalleryBrowseController -> R.id.nav_browse
                     is BrowseController -> R.id.nav_browse
                     else -> R.id.nav_library
@@ -527,6 +529,7 @@ open class MainActivity : BaseActivity<MainActivityBinding>() {
                         R.id.nav_library -> KomgaBrowseController()
                         R.id.nav_recents -> RecentsController()
                         R.id.nav_dashboard -> StatsController()
+                        R.id.nav_books -> BooksController()
                         else -> BrowseController()
                     },
                     id,

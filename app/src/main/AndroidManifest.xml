@@ -50,6 +50,11 @@
             <meta-data android:name="android.app.searchable" android:resource="@xml/searchable"/>
         </activity>
 
+        <activity
+            android:name="yokai.presentation.reader.epub.CalibreEpubReaderActivity"
+            android:exported="false"
+            android:hardwareAccelerated="true" />
+
         <!--#region MainActivity aliases for App Icon switcher -->
         <activity-alias
             android:name="${applicationId}.MainActivityDefaultDummy"

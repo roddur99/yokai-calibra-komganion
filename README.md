@@ -4,7 +4,7 @@
 
 # Yokai Komganion
 
-A focused Android reader for Komga libraries and filesystem image galleries.
+A focused Android reader for Komga libraries, filesystem image galleries, and Calibre light novels.
 
 </div>
 
@@ -13,12 +13,13 @@ A focused Android reader for Komga libraries and filesystem image galleries.
 
 ## What this fork is
 
-Yokai Komganion keeps Yōkai's mature browsing and reader experience while narrowing the application around two self-hosted sources:
+Yokai Komganion keeps Yōkai's mature browsing and reader experience while narrowing the application around three self-hosted sources:
 
-- **Komga** for comics, manga, and books managed by an existing Komga server.
+- **Komga** for comics and manga managed by an existing Komga server.
 - **Galleries** for ordinary image folders exposed by the companion [Gallery Komganion server](https://github.com/roddur99/gallery-komganion).
+- **Books** for light novels exposed through a Calibre OPDS content server.
 
-The main navigation is focused on **Komga**, **Recents**, and **Galleries**. Users connect directly to their servers instead of installing general-purpose source extensions.
+The main navigation is focused on **Komga**, **Recents**, **Galleries**, and **Books**. Users connect directly to their servers instead of installing general-purpose source extensions.
 
 ## Changes from Yōkai
 
@@ -54,9 +55,35 @@ This fork currently adds or changes the following:
 - Slideshow playback with sequential and shuffle modes.
 - The same persistent playback-speed options as Komga.
 
+### Calibre light novels
+
+- Built-in authenticated Calibre OPDS connection.
+  - Supports the Basic and Digest authentication methods used by Calibre.
+  - Restricts the Books tab to an exact configurable tag, such as `Light Novel`.
+  - Works with a Calibre virtual library while still enforcing the configured tag query.
+- Dedicated Books tab with full-resolution covers.
+- Search by title, author, or series.
+- Sort by series order, title, author, or newest.
+- Filter to downloaded books.
+- Persistent EPUB downloads for offline reading.
+- Dedicated Readium-based reflowable EPUB reader.
+  - Paginated and scrolling modes.
+  - Light, sepia, and dark themes.
+  - Adjustable font size, margins, and line spacing.
+  - Single-page layout in landscape mode.
+  - Table-of-contents navigation with nested sections.
+  - Selected-text actions for Define, Google, Translate, Copy, and Share when supported by installed apps.
+- Exact local resume positions and visible completion percentages.
+  - Progress bars appear on started book cards.
+  - Books are marked completed at approximately 100%.
+  - Reading progress can be reset without deleting the EPUB or historical activity.
+- Calibre reading sessions feed the private dashboard's reading-time history, completion calendar, recent completions, most-read series, and source usage.
+- Dashboard counts show available, downloaded, started, and completed light novels.
+- EPUB resume locators and Calibre activity are included in the versioned JSON export/import flow.
+
 ### Focused interface
 
-- Main tabs reduced to Komga, Recents, and Galleries.
+- Main tabs focused on Komga, Recents, Galleries, and Books.
 - Branding changed to **Yokai Komganion**.
 - Extension-update badges, background extension checks, and extension actions were removed from the focused navigation.
 - Dedicated adaptive launcher and themed icon.
@@ -90,7 +117,7 @@ The roadmap is intentionally incremental. Version assignments may change as feat
 | **v0.1.2 — shipped** | Komga book covers, loading/error placeholders, and covers in the reader chapter sheet. |
 | **v0.1.3 — shipped** | Score sorting, rated/unrated and has-notes filters, and a recently rated view. |
 | **v0.1.4 — shipped** | Private local dashboard with reading sessions, daily/weekly/monthly history, recent completions, Komga/Gallery usage, completion calendar, series averages, most-read series, and portable activity backup. |
-| **v0.1.5** | Books-tab technical prototype using Calibre OPDS and a dedicated reflowable EPUB reader. |
+| **v0.1.5 — ready** | Calibre OPDS Books tab, persistent EPUB downloads, Readium reader, TOC and text lookup, reader settings, exact progress, dashboard statistics, and portable progress backup. |
 | **v0.1.6** | Reading queue, improved shuffle, cross-item playback, and delete-then-advance workflows. |
 | **v0.2.0** | Optional multi-device synchronization through Gallery Komganion for annotations, activity, completions, bookmarks, and queue state. |
 | **Later** | Page-level notes and bookmarks, richer statistics, and other features guided by real usage. |
@@ -99,13 +126,16 @@ Activity tracking will begin when the dashboard foundation ships. Time-spent and
 
 ## Current status
 
-Version **0.1.4** adds a private local activity dashboard with accurate indexed Komga/Gallery counts, weekly totals, daily/weekly/monthly reading-time charts, recent completions, a completion calendar, series score averages, and most-read series. Scores, notes, and raw reading sessions can be exported and merged into another device without duplicating activity. Komga and Gallery browsing, reading, deletion, metadata, slideshow, shuffle, playback-speed controls, annotations, cover row recycling, discovery filters, dashboard statistics, and JSON recovery have been tested on Android devices and emulators.
+Version **0.1.5** is ready for release. It adds a Calibre-backed Books tab for tagged light novels, persistent EPUB downloads, a configurable Readium reader, table-of-contents navigation, selected-text lookup actions, exact resume positions, progress reset, dashboard integration, and portable EPUB-progress backup.
+
+Komga and Gallery browsing, reading, deletion, metadata, slideshow, shuffle, playback-speed controls, annotations, cover row recycling, discovery filters, dashboard statistics, and JSON recovery remain supported. Calibre browsing, downloading, offline reading, reader navigation, progress persistence, dashboard activity, reset, and export/import have been tested on Android emulators.
 
 Known follow-up work includes:
 
 - Better connection and offline error states.
 - Stable Gallery page IDs before finalizing the companion API.
 - Automatic Komga cache refresh after book deletion is intentionally deferred; use manual refresh.
+- Cross-device synchronization remains planned for a later Gallery Komganion integration.
 
 ## Development build
 
@@ -113,7 +143,7 @@ Requirements:
 
 - Android SDK
 - JDK 17
-- A configured Komga server and/or Gallery Komganion server
+- A configured Komga server, Gallery Komganion server, and/or Calibre content server
 
 On Windows PowerShell:
 
