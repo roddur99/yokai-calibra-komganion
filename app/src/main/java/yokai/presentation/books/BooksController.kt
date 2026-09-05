@@ -40,6 +40,7 @@ class BooksController(
             onRetry = ::refresh,
             onDownload = ::download,
             onDeleteDownload = ::deleteDownload,
+            onResetProgress = ::resetProgress,
             onOpen = ::open,
         )
     }
@@ -98,6 +99,10 @@ class BooksController(
                 seriesTitle = book.series ?: book.title,
             ),
         )
+    }
+
+    private fun resetProgress(book: CalibreBook) {
+        progressStore.remove(book.id)
     }
 
     private fun deleteDownload(book: CalibreBook) {
