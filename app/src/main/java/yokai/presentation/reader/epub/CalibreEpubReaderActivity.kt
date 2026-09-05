@@ -23,7 +23,6 @@ import androidx.fragment.app.commitNow
 import com.google.android.material.appbar.MaterialToolbar
 import eu.kanade.tachiyomi.R
 import java.io.File
-import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import org.readium.r2.navigator.SelectableNavigator
 import org.readium.r2.navigator.epub.EpubNavigatorFactory
